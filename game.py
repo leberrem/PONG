@@ -274,8 +274,8 @@ def main():
         screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
     else:
         screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        icon_32x32 = pygame.image.load("logo.png").convert_alpha()
-        pygame.display.set_icon(icon_32x32)
+        icon = pygame.image.load("logo.png").convert_alpha()
+        pygame.display.set_icon(icon)
 
     # Initialisation de la position de la balle
     if ( current_player == 1 ):
