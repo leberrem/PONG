@@ -1,6 +1,6 @@
 [Plymouth Theme]
-Name=Arch Linux Simple Image
-Description=This is a plymouth theme which simply displays an image
+Name=Atari
+Description=This is a plymouth theme which simply displays atari image
 ModuleName=script
 
 [script]
