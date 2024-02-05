@@ -66,6 +66,10 @@ ball_replace_timer = 0
 last_ball_x_position = 0
 last_ball_y_position = 0
 
+# ####################################################
+# Classes
+# ####################################################
+
 class Dust_particle:
     def __init__(self, x, y, color, direction):
         self.x, self.y = x, y
@@ -192,6 +196,10 @@ class Halo_frame:
         pygame.draw.line(screen, WHITE, (WIDTH,HEIGHT), (0,HEIGHT), self.line_width)
         pygame.draw.line(screen, WHITE, (0,HEIGHT), (0,0), self.line_width)
 
+# ####################################################
+# Fonctions
+# ####################################################
+
 # Fonction pour vérifier si on est sur raspberry pi
 def is_raspberrypi():
     try:
@@ -237,9 +245,10 @@ def draw_frame(surface, color, width=1):
     pygame.draw.line(surface, color, (WIDTH,HEIGHT), (0,HEIGHT), width)
     pygame.draw.line(surface, color, (0,HEIGHT), (0,0), width)
 
-# ##########################
+# ####################################################
 # Fonction principale
-# ##########################
+# ####################################################
+
 def main():
     global left_score, right_score, screen, no_effect
 
