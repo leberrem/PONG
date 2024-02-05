@@ -44,7 +44,7 @@ BALL_INIT_SPEED = 8  # Vitesse de la balle
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
 HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
-WIN_SCORE = 8 # Score à obtenir pour gagner
+WIN_SCORE = 1 # Score à obtenir pour gagner
 FONT_SIZE = 80 # Taille de la police de caractères
 DASH_LENGTH = 10 # Définition du motif de pointillé
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
@@ -58,7 +58,6 @@ font = pygame.font.Font("SevenSegment.ttf", FONT_SIZE)
 
 # Effets visuels
 no_effect = False
-particle_effects = []
 dust_effects = []
 firework_effects = []
 Halo_frame_effects = []
@@ -93,7 +92,6 @@ class Dust_particle:
         self.y += self.vy
         if random.randint(0, 100) < 40:
             self.radius -= 1
-        if self.radius < 0: self.radius = 0
 
 class Dust:
     def __init__(self, x, y, color, direction):
@@ -107,8 +105,12 @@ class Dust:
 
     def update(self):
         for i in self.particles:
-            i.move()
-            self.particles = [particle for particle in self.particles if particle.radius > 0]
+            if i.radius > 0:
+                i.move()
+                #self.particles = [particle for particle in self.particles if particle.radius > 0]
+            else:
+                self.particles.remove(i)
+                del i
 
     def draw(self):
         for i in self.particles:
@@ -165,6 +167,7 @@ class Firework:
                 particle.move()
                 if particle.life <= 0:
                     self.particles.remove(particle)
+                    del particle
 
     def draw(self):
         if not self.exploded:
@@ -496,22 +499,29 @@ def main():
         ball_speed_y = max(min(ball_speed_y, 20), -20)
 
         # Mise à jour et dessin des effets de particules
-        for particle in particle_effects:
-            particle.move()
-            particle.draw()
-
-        for particle in range(len(dust_effects)):
-            if len(dust_effects[particle].particles) > 0:
-                dust_effects[particle].draw()
-                dust_effects[particle].update()
+        for particle in dust_effects:
+            if len(particle.particles) > 0:
+                particle.update()
+                particle.draw()
+            else:
+                dust_effects.remove(particle)
+                del particle
 
         for firework in firework_effects:
-            firework.move()
-            firework.draw()
+            if len(firework.particles) > 0 or firework.exploded == False:
+                firework.move()
+                firework.draw()
+            else:
+                firework_effects.remove(firework)
+                del firework
 
         for halo in Halo_frame_effects:
-            halo.move()
-            halo.draw()
+            if halo.count > 0:
+                halo.move()
+                halo.draw()
+            else:
+                Halo_frame_effects.remove(halo)
+                del halo
 
         draw_frame(screen, WHITE, LINE_WIDTH)
         draw_dashed_line(screen, WHITE, (WIDTH // 2, 0), (WIDTH // 2, HEIGHT), LINE_WIDTH, DASH_LENGTH)
