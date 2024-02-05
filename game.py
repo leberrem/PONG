@@ -413,7 +413,7 @@ def main():
                 game_paused = True
                 ball_replace_timer = BALL_REPLACE_DURATION
                 current_player = 1
-                Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
+                if not no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
                 if right_score >= WIN_SCORE:
                     ball_speed = BALL_INIT_SPEED
                     game_started = False
@@ -429,7 +429,7 @@ def main():
                 game_paused = True
                 ball_replace_timer = BALL_REPLACE_DURATION
                 current_player = 2
-                Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
+                if not no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
                 if left_score >= WIN_SCORE:
                     ball_speed = BALL_INIT_SPEED
                     game_started = False
