@@ -104,17 +104,16 @@ class Dust:
             self.particles.append(Dust_particle(self.x, self.y, self.color, self.direction))
 
     def update(self):
-        for i in self.particles:
-            if i.radius > 0:
-                i.move()
-                #self.particles = [particle for particle in self.particles if particle.radius > 0]
+        for particle in self.particles:
+            if particle.radius > 0:
+                particle.move()
             else:
-                self.particles.remove(i)
-                del i
+                self.particles.remove(particle)
+                del particle
 
     def draw(self):
-        for i in self.particles:
-            i.draw()
+        for particle in self.particles:
+            particle.draw()
 
 class Firework_particle:
     def __init__(self, x, y, color):
