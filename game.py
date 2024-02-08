@@ -12,9 +12,9 @@ pygame.init()
 # Couleurs
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
 RED = (255, 0, 0)
-LIGHT_YELLOW = (255, 255, 204)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
 
 if locale.getlocale()[0] == "fr_FR":
     LOOSE_TXT="PERDU"
@@ -28,7 +28,7 @@ DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT = 0, 1, 2, 3
 SPACE_WIDTH = 5 # Taille des espaces
 LINE_WIDTH = 5 # Epaisseurs des lignes
 BALL_ACCELERATION = 0.2 # Accélération de la balle à chaque rebond
-BALL_REPLACE_DURATION = 30 # Vitesse d'apparition et disparition de la balle
+BALL_REPLACE_DURATION = 30 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
 HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
@@ -56,7 +56,7 @@ class responsive_values:
         self.PADDLE_SPEED = int(height*self.ratio*0.1) # Vitesse de déplacement des raquettes
         self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
         self.BALL_INIT_SPEED = int(width*self.ratio*0.07)  # Vitesse initiale de déplacemant de la balle
-        self.BALL_MAX_SPEED = int(width*self.ratio*0.2)  # Vitesse initiale de déplacemant de la balle
+        self.BALL_MAX_SPEED = int(width*self.ratio*0.15)  # Vitesse initiale de déplacemant de la balle
         self.BALL_INERTIA = int(height*self.ratio*0.09) # Inertie de la balle
         self.FONT_SIZE = int(height*self.ratio*0.8) # Taille de la police de caractères
         self.DASH_LENGTH = int(height*self.ratio*0.1) # Définition du motif de pointillé
@@ -479,6 +479,7 @@ def main():
             if ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2 and left_paddle_y - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < ball_y < left_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2 :
                 if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
+                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED)
                 ball_speed_x = -ball_speed_x
                 if ball_x < LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2:
                     ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
@@ -494,6 +495,7 @@ def main():
             if ball_x >= screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2 and right_paddle_y  - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < ball_y < right_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2:
                 if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
+                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED)
                 ball_speed_x = -ball_speed_x
                 if ball_x > screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2:
                     ball_x = screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
@@ -600,10 +602,6 @@ def main():
         if game_paused == True and ball_replace_timer <= 0:
             game_paused = False
 
-        # Limiter la vitesse de la balle
-        ball_speed_x = max(min(ball_speed_x, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED)
-        ball_speed_y = max(min(ball_speed_y, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED)
-
         # Mise à jour et dessin des effets de particules
         for particle in dust_effects:
             if len(particle.particles) > 0:
@@ -632,7 +630,10 @@ def main():
         draw_frame(screen, WHITE, LINE_WIDTH)
         draw_dashed_line(screen, WHITE, (screen.get_width() / 2, 0), (screen.get_width() / 2, screen.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
         draw_paddles(screen, left_paddle_y, right_paddle_y, responsive.PADDLE_WIDTH, responsive.PADDLE_HEIGHT, LINE_WIDTH)
-        draw_ball(screen, ball_x, ball_y, WHITE, responsive.BALL_SIZE)
+        if ball_speed < responsive.BALL_MAX_SPEED:
+            draw_ball(screen, ball_x, ball_y, WHITE, responsive.BALL_SIZE)
+        else:
+            draw_ball(screen, ball_x, ball_y, RED, responsive.BALL_SIZE)
         draw_score(screen, font, responsive.FONT_SIZE, left_score, right_score)
 
         pygame.display.flip()
