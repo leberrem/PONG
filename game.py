@@ -50,7 +50,6 @@ Halo_frame_effects = []
 class responsive_values:
     def __init__(self, width, height):
         self.ratio = 1/6
-        # Calcul des tailles d'objet en fonction de la résolution
         self.PADDLE_WIDTH = int(height*self.ratio*0.2) # Taille des raquettes
         self.PADDLE_HEIGHT = int(height*self.ratio) # Taille des raquettes
         self.PADDLE_SPEED = int(height*self.ratio*0.1) # Vitesse de déplacement des raquettes
@@ -479,7 +478,7 @@ def main():
             if ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2 and left_paddle_y - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < ball_y < left_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2 :
                 if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
-                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED)
+                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
                 ball_speed_x = -ball_speed_x
                 if ball_x < LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2:
                     ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
@@ -495,7 +494,7 @@ def main():
             if ball_x >= screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2 and right_paddle_y  - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < ball_y < right_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2:
                 if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
-                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED)
+                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
                 ball_speed_x = -ball_speed_x
                 if ball_x > screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2:
                     ball_x = screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
