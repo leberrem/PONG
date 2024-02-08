@@ -1,3 +1,29 @@
+# Installation
+
+## Pre-requis
+
+Distribution Raspberry Pi OS Lite
+
+```
+sudo apt update
+sudo apt upgrade
+sudo apt install python3-pygame
+```
+
+## Resolution 800*600
+
+/boot/config.txt
+```
+hdmi_group=2
+hdmi_mode=9
+```
+
+## Copy game
+
+scp game.* SevenSegment.ttf atari@192.168.1.132:~/.
+
+# --------------------------
+
     Update package: sudo apt upgrade
 
     install plymouth : sudo apt-get install plymouth plymouth-themes
