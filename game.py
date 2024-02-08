@@ -2,9 +2,9 @@
 import pygame
 import random
 import math
-import pygame.gfxdraw
 import locale
 import sys
+from pygame.locals import *
 
 # Initialisation de Pygame
 pygame.init()
@@ -55,7 +55,7 @@ class responsive_values:
         self.PADDLE_SPEED = int(height*self.ratio*0.1) # Vitesse de déplacement des raquettes
         self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
         self.BALL_INIT_SPEED = int(width*self.ratio*0.07)  # Vitesse initiale de déplacemant de la balle
-        self.BALL_MAX_SPEED = int(width*self.ratio*0.15)  # Vitesse initiale de déplacemant de la balle
+        self.BALL_MAX_SPEED = int(width*self.ratio*0.15)  # Vitesse maximale de déplacemant de la balle
         self.BALL_INERTIA = int(height*self.ratio*0.09) # Inertie de la balle
         self.FONT_SIZE = int(height*self.ratio*0.8) # Taille de la police de caractères
         self.DASH_LENGTH = int(height*self.ratio*0.1) # Définition du motif de pointillé
@@ -273,7 +273,7 @@ def main():
 
     # Chargement des effets sonores
     if not no_sound:
-        pygame.mixer.set_num_channels(2)
+        pygame.mixer.set_num_channels(3)
         paddle_sound = pygame.mixer.Sound("sound/paddle.wav")
         wall_sound = pygame.mixer.Sound("sound/wall.wav")
         score_sound = pygame.mixer.Sound("sound/score.wav")
@@ -464,13 +464,13 @@ def main():
 
             # rebond de la balle sur le haut
             if ball_y <= responsive.BALL_SIZE/2:
-                if not no_sound: pygame.mixer.Channel(1).play(wall_sound)
+                if not no_sound: pygame.mixer.Channel(2).play(wall_sound)
                 ball_speed_y = -ball_speed_y
                 if not no_effect: dust_effects.append(Dust(ball_x, ball_y - responsive.BALL_SIZE/2, WHITE, DIRECTION_DOWN))
 
             # rebond de la balle sur la bas
             if ball_y >= screen.get_height() - responsive.BALL_SIZE/2:
-                if not no_sound: pygame.mixer.Channel(1).play(wall_sound)
+                if not no_sound: pygame.mixer.Channel(2).play(wall_sound)
                 ball_speed_y = -ball_speed_y
                 if not no_effect: dust_effects.append(Dust(ball_x, ball_y + responsive.BALL_SIZE/2, WHITE, DIRECTION_UP))
 
@@ -510,7 +510,7 @@ def main():
             if ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2:
                 right_score += 1
                 if right_score < WIN_SCORE:
-                    if not no_sound: pygame.mixer.Channel(1).play(score_sound)
+                    if not no_sound: pygame.mixer.Channel(0).play(score_sound)
                 else:
                     if not no_sound: pygame.mixer.Channel(0).play(gameover_sound)
                 last_ball_x_position = ball_x
@@ -530,7 +530,7 @@ def main():
             if ball_x >= screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2:
                 left_score += 1
                 if left_score < WIN_SCORE:
-                    if not no_sound: pygame.mixer.Channel(1).play(score_sound)
+                    if not no_sound: pygame.mixer.Channel(0).play(score_sound)
                 else:
                     if not no_sound: pygame.mixer.Channel(0).play(gameover_sound)
                 last_ball_x_position = ball_x
