@@ -32,7 +32,7 @@ BALL_REPLACE_DURATION = 30 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
 HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
-WIN_SCORE = 8 # Score à obtenir pour gagner
+WIN_SCORE = 1 # Score à obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
 # Etat initial
@@ -140,16 +140,18 @@ class Firework:
             particle = Firework_particle(self.x, self.y, self.color)
             self.particles.append(particle)
 
-    def move(self, surface):
+    def move(self, surface, no_sound, explosion_sound):
         if not self.exploded:
             if self.direction == DIRECTION_RIGHT:
                 self.x += 5
                 if self.x >= random.randint(int(surface.get_width() * 0.25), int(surface.get_width() / 2 - 50)):
+                    if not no_sound: pygame.mixer.Channel(2).play(explosion_sound)
                     self.exploded = True
                     self.explode()
             if self.direction == DIRECTION_LEFT:
                 self.x -= 5
                 if self.x <= random.randint(int(surface.get_width() / 2 + 50), int(surface.get_width() * 0.75)):
+                    if not no_sound: pygame.mixer.Channel(2).play(explosion_sound)
                     self.exploded = True
                     self.explode()
         else:
@@ -280,6 +282,7 @@ def main():
         start_sound = pygame.mixer.Sound("sound/start.wav")
         gameover_sound = pygame.mixer.Sound("sound/gameover.wav")
         laser_sound = pygame.mixer.Sound("sound/laser.wav")
+        explosion_sound = pygame.mixer.Sound("sound/explosion.wav")
 
     # Définition du mode d'affichage
     if fullscreen:
@@ -612,7 +615,7 @@ def main():
 
         for firework in firework_effects:
             if len(firework.particles) > 0 or firework.exploded == False:
-                firework.move(screen)
+                firework.move(screen, no_sound, explosion_sound)
                 firework.draw(screen)
             else:
                 firework_effects.remove(firework)
