@@ -7,6 +7,7 @@ import sys
 from pygame.locals import *
 
 # Initialisation de Pygame
+pygame.mixer.pre_init(44100,-16,2,2048)
 pygame.init()
 
 # Couleurs
@@ -32,7 +33,7 @@ BALL_REPLACE_DURATION = 30 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
 HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
-WIN_SCORE = 1 # Score à obtenir pour gagner
+WIN_SCORE = 8 # Score à obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
 # Etat initial
@@ -215,8 +216,8 @@ def help():
 
 # Fonction pour dessiner les raquettes
 def draw_paddles(surface, left_paddle_y, right_paddle_y, paddle_with, paddle_height, line_width):
-    pygame.draw.rect(surface, WHITE, (line_width, left_paddle_y - paddle_height / 2 , paddle_with, paddle_height))
-    pygame.draw.rect(surface, WHITE, (surface.get_width() - paddle_with - line_width, right_paddle_y - paddle_height / 2, paddle_with, paddle_height))
+    pygame.draw.rect(surface, WHITE, (int(line_width), int(left_paddle_y - paddle_height / 2) , paddle_with, paddle_height))
+    pygame.draw.rect(surface, WHITE, (int(surface.get_width() - paddle_with - line_width), int(right_paddle_y - paddle_height / 2), paddle_with, paddle_height))
 
 # Fonction pour dessiner la balle
 def draw_ball(surface, ball_x, ball_y, color, size):
@@ -226,8 +227,8 @@ def draw_ball(surface, ball_x, ball_y, color, size):
 def draw_score(surface, font, font_size, left_score, right_score):
     left_text = font.render(str(left_score), True, WHITE)
     right_text = font.render(str(right_score), True, WHITE)
-    surface.blit(left_text, (surface.get_width() / 2 - (font_size/2 + 20), 20))
-    surface.blit(right_text, (surface.get_width() / 2 + 20, 20))
+    surface.blit(left_text, (int(surface.get_width() / 2 - (font_size/2 + 20)), 20))
+    surface.blit(right_text, (int(surface.get_width() / 2 + 20), 20))
 
 # Fonction pour afficher une ligne en pointillés
 def draw_dashed_line(surface, color, start_pos, end_pos, width=1, dash_length=10):
@@ -298,7 +299,7 @@ def main():
     responsive = responsive_values(screen.get_width(), screen.get_height())
 
     # chargement de la police de caractères
-    font = pygame.font.Font("SevenSegment.ttf", responsive.FONT_SIZE)
+    font = pygame.font.Font("font/SevenSegment.ttf", responsive.FONT_SIZE)
 
     # Valeurs initiales
     left_score = 0
