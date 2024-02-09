@@ -206,7 +206,8 @@ class FlameParticle:
                 r, g, b = (255, 150, 0)
             else:
                 r, g, b = (50, 50, 50)
-            # r, g, b = (0, 0, 255)  # uncomment this to make the flame blue
+            #r, g, b = (0, 0, 255)  # uncomment this to make the flame blue
+            r, g, b = (255, 255, 255)  # uncomment this to make the flame white
             color = (r, g, b, alpha)
             pygame.draw.circle(self.surf, color, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
         surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
@@ -706,7 +707,7 @@ def main():
         if ball_speed >= responsive.BALL_MAX_SPEED:
             flame.x = ball_x
             flame.y = ball_y
-            flame.draw_flame(screen)
+            if not no_effect: flame.draw_flame(screen)
 
         draw_frame(screen, WHITE, LINE_WIDTH)
         draw_dashed_line(screen, WHITE, (screen.get_width() / 2, 0), (screen.get_width() / 2, screen.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
