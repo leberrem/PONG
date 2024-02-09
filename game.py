@@ -343,6 +343,8 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     event_actions.append("EXIT")
+                if event.key == pygame.K_r:
+                    event_actions.append("RESET")
                 if event.key == pygame.K_LCTRL:
                     event_actions.append("LEFT_PADDLE_BUTTON")
                 if event.key == pygame.K_RCTRL:
@@ -351,6 +353,9 @@ def main():
                 # Barre gauche - click gauche
                 if event.button == 1:
                     event_actions.append("LEFT_PADDLE_BUTTON")
+                # click central
+                elif event.button == 2:
+                    event_actions.append("RESET")
                 # Barre droite - click droite
                 elif event.button == 3:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
@@ -457,6 +462,11 @@ def main():
                             firework_color = random.choice(FIREWORK_COLORS)
                             firework_effects.append(Firework(screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH, right_paddle_y, firework_color, DIRECTION_LEFT))
                             dust_effects.append(Dust(screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH, right_paddle_y, firework_color, DIRECTION_LEFT))
+            # --------------------------------------------------------------------------------------------------
+            elif action == "RESET":
+                right_score = 0
+                left_score = 0
+                ball_speed = responsive.BALL_INIT_SPEED
             # --------------------------------------------------------------------------------------------------
             elif action == "EXIT":
                 running = False
