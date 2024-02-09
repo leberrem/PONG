@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import pygame
 import random
 import math
@@ -28,12 +28,12 @@ DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT = 0, 1, 2, 3
 
 SPACE_WIDTH = 5 # Taille des espaces
 LINE_WIDTH = 5 # Epaisseurs des lignes
-BALL_ACCELERATION = 0.2 # Accélération de la balle à chaque rebond
+BALL_ACCELERATION = 0.2 # Acceleration de la balle a chaque rebond
 BALL_REPLACE_DURATION = 30 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
 HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
-WIN_SCORE = 8 # Score à obtenir pour gagner
+WIN_SCORE = 8 # Score a obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
 # Etat initial
@@ -53,13 +53,13 @@ class responsive_values:
         self.ratio = 1/6
         self.PADDLE_WIDTH = int(height*self.ratio*0.2) # Taille des raquettes
         self.PADDLE_HEIGHT = int(height*self.ratio) # Taille des raquettes
-        self.PADDLE_SPEED = int(height*self.ratio*0.1) # Vitesse de déplacement des raquettes
+        self.PADDLE_SPEED = int(height*self.ratio*0.1) # Vitesse de deplacement des raquettes
         self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
-        self.BALL_INIT_SPEED = int(width*self.ratio*0.07)  # Vitesse initiale de déplacemant de la balle
-        self.BALL_MAX_SPEED = int(width*self.ratio*0.15)  # Vitesse maximale de déplacemant de la balle
+        self.BALL_INIT_SPEED = int(width*self.ratio*0.07)  # Vitesse initiale de deplacemant de la balle
+        self.BALL_MAX_SPEED = int(width*self.ratio*0.15)  # Vitesse maximale de deplacemant de la balle
         self.BALL_INERTIA = int(height*self.ratio*0.09) # Inertie de la balle
-        self.FONT_SIZE = int(height*self.ratio*0.8) # Taille de la police de caractères
-        self.DASH_LENGTH = int(height*self.ratio*0.1) # Définition du motif de pointillé
+        self.FONT_SIZE = int(height*self.ratio*0.8) # Taille de la police de caracteres
+        self.DASH_LENGTH = int(height*self.ratio*0.1) # Definition du motif de pointille
 
 class Dust_particle:
     def __init__(self, x, y, color, direction):
@@ -169,6 +169,67 @@ class Firework:
             for particle in self.particles:
                 particle.draw(surface)
 
+class FlameParticle:
+    alpha_layer_qty = 2
+    alpha_glow_difference_constant = 2
+
+    def __init__(self, x, y, r=5):
+        self.x = x
+        self.y = y
+        self.r = r
+        self.original_r = r
+        self.alpha_layers = FlameParticle.alpha_layer_qty
+        self.alpha_glow = FlameParticle.alpha_glow_difference_constant
+        max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
+        self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
+        self.burn_rate = 0.1 * random.randint(1, 4)
+
+    def update(self):
+        self.y -= 7 - self.r
+        self.x += random.randint(-self.r, self.r)
+        self.original_r -= self.burn_rate
+        self.r = int(self.original_r)
+        if self.r <= 0:
+            self.r = 1
+
+    def draw(self, surface):
+        max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
+        self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
+        for i in range(self.alpha_layers, -1, -1):
+            alpha = 255 - i * (255 // self.alpha_layers - 5)
+            if alpha <= 0:
+                alpha = 0
+            radius = self.r * i * i * self.alpha_glow
+            if self.r == 4 or self.r == 3:
+                r, g, b = (255, 0, 0)
+            elif self.r == 2:
+                r, g, b = (255, 150, 0)
+            else:
+                r, g, b = (50, 50, 50)
+            # r, g, b = (0, 0, 255)  # uncomment this to make the flame blue
+            color = (r, g, b, alpha)
+            pygame.draw.circle(self.surf, color, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
+        surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
+
+class Flame:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.flame_intensity = 2
+        self.flame_particles = []
+        for i in range(self.flame_intensity * 25):
+            self.flame_particles.append(FlameParticle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
+
+    def draw_flame(self, surface):
+        for i in self.flame_particles:
+            if i.original_r <= 0:
+                self.flame_particles.remove(i)
+                self.flame_particles.append(FlameParticle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
+                del i
+                continue
+            i.update()
+            i.draw(surface)
+
 class Halo_frame:
     def __init__(self, width, count, speed):
         self.count = count
@@ -230,7 +291,7 @@ def draw_score(surface, font, font_size, left_score, right_score):
     surface.blit(left_text, (int(surface.get_width() / 2 - (font_size/2 + 20)), 20))
     surface.blit(right_text, (int(surface.get_width() / 2 + 20), 20))
 
-# Fonction pour afficher une ligne en pointillés
+# Fonction pour afficher une ligne en pointilles
 def draw_dashed_line(surface, color, start_pos, end_pos, width=1, dash_length=10):
     x1, y1 = start_pos
     x2, y2 = end_pos
@@ -243,7 +304,7 @@ def draw_dashed_line(surface, color, start_pos, end_pos, width=1, dash_length=10
         end = round(x1 + (i + 1) * dx * dash_length), round(y1 + (i + 1) * dy * dash_length)
         pygame.draw.line(surface, color, start, end, width)
 
-# Fonction pour afficher une ligne en pointillés
+# Fonction pour afficher une ligne en pointilles
 def draw_frame(surface, color, width=1):
     pygame.draw.line(surface, color, (0,0), (surface.get_width(),0), width)
     pygame.draw.line(surface, color, (surface.get_width(),0), (surface.get_width(),surface.get_height()), width)
@@ -259,7 +320,7 @@ def main():
     current_player = random.randint(1, 2)
     clock = pygame.time.Clock()
 
-    # Contrôle des paramètres d'entrée
+    # Controle des parametres d'entree
     no_effect = False
     no_sound = False
     fullscreen = False
@@ -285,7 +346,7 @@ def main():
         laser_sound = pygame.mixer.Sound("sound/laser.wav")
         explosion_sound = pygame.mixer.Sound("sound/explosion.wav")
 
-    # Définition du mode d'affichage
+    # Definition du mode d'affichage
     if fullscreen:
         screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         pygame.mouse.set_visible(False)
@@ -295,10 +356,10 @@ def main():
         icon = pygame.image.load("logo.png").convert_alpha()
         pygame.display.set_icon(icon)
 
-    # Calcul des valeurs relatives en fonction de la résolution
+    # Calcul des valeurs relatives en fonction de la resolution
     responsive = responsive_values(screen.get_width(), screen.get_height())
 
-    # chargement de la police de caractères
+    # chargement de la police de caracteres
     font = pygame.font.Font("font/SevenSegment.ttf", responsive.FONT_SIZE)
 
     # Valeurs initiales
@@ -326,6 +387,8 @@ def main():
     elif ( current_player == 2 ):
         ball_x = screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH
         ball_y = right_paddle_y
+
+    flame = Flame(ball_x, ball_y)
 
     running = True
 
@@ -360,7 +423,7 @@ def main():
                 elif event.button == 3:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
             elif event.type == pygame.MOUSEMOTION:
-                # Récupération de la position du curseur
+                # Recuperation de la position du curseur
                 mouse_position=event.pos
                 # Barre gauche - mouvement horizontal
                 if mouse_position[0] < previous_mouse_position[0]:
@@ -422,17 +485,17 @@ def main():
                     if right_score >= WIN_SCORE:
                         right_score = 0
                         left_score = 0
-                    # Lancement de la balle à droite
+                    # Lancement de la balle a droite
                     if ( current_player == 1 ):
                         if not no_effect: dust_effects.append(Dust(ball_x-responsive.BALL_SIZE / 2, ball_y, WHITE, DIRECTION_RIGHT))
-                        # Calcul de l'angle de rebond basé sur la position relative de la balle sur la raquette
+                        # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
                         relative_intersect_y = left_paddle_y - ball_y
                         normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degrés)
+                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
                         ball_speed_x = ball_speed * math.cos(bounce_angle)
                         ball_speed_y = ball_speed * -math.sin(bounce_angle)
                         game_started = True
-                    # Lancement de la balle à droite
+                    # Lancement de la balle a droite
                     if ( current_player == 2  and left_score >= WIN_SCORE ):
                         if not no_effect:
                             if not no_sound: pygame.mixer.Channel(1).play(laser_sound)
@@ -446,13 +509,13 @@ def main():
                     if left_score >= WIN_SCORE:
                         right_score = 0
                         left_score = 0
-                    # Lancement de la balle à gauche
+                    # Lancement de la balle a gauche
                     if ( current_player == 2 ):
                         if not no_effect: dust_effects.append(Dust(ball_x+responsive.BALL_SIZE / 2, ball_y, WHITE, DIRECTION_LEFT))
-                        # Calcul de l'angle de rebond basé sur la position relative de la balle sur la raquette
+                        # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
                         relative_intersect_y = right_paddle_y - ball_y
                         normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degrés)
+                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
                         ball_speed_x = -ball_speed * math.cos(bounce_angle)
                         ball_speed_y = ball_speed * -math.sin(bounce_angle)
                         game_started = True
@@ -497,10 +560,10 @@ def main():
                 if ball_x < LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2:
                     ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
                 if not no_effect: dust_effects.append(Dust(ball_x - responsive.BALL_SIZE / 2, ball_y, WHITE, DIRECTION_RIGHT))
-                # Calcul de l'angle de rebond basé sur la position relative de la balle sur la raquette
+                # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
                 relative_intersect_y = left_paddle_y - ball_y
                 normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degrés)
+                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
                 ball_speed_x = ball_speed * math.cos(bounce_angle)
                 ball_speed_y = ball_speed * -math.sin(bounce_angle)
 
@@ -513,14 +576,14 @@ def main():
                 if ball_x > screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2:
                     ball_x = screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
                 if not no_effect: dust_effects.append(Dust(ball_x + responsive.BALL_SIZE / 2, ball_y, WHITE, DIRECTION_LEFT))
-                # Calcul de l'angle de rebond basé sur la position relative de la balle sur la raquette
+                # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
                 relative_intersect_y = right_paddle_y - ball_y
                 normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degrés)
+                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
                 ball_speed_x = -ball_speed * math.cos(bounce_angle)
                 ball_speed_y = ball_speed * -math.sin(bounce_angle)
 
-            # Sortie de la balle à gauche
+            # Sortie de la balle a gauche
             if ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2:
                 right_score += 1
                 if right_score < WIN_SCORE:
@@ -540,7 +603,7 @@ def main():
                     ball_speed = responsive.BALL_INIT_SPEED
                     game_started = False
 
-            # Sortie de la balle à droite
+            # Sortie de la balle a droite
             if ball_x >= screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2:
                 left_score += 1
                 if left_score < WIN_SCORE:
@@ -582,7 +645,7 @@ def main():
                     if ball_y < right_paddle_y - responsive.PADDLE_HEIGHT / 2: ball_y = right_paddle_y - responsive.PADDLE_HEIGHT / 2
                     if ball_y > right_paddle_y + responsive.PADDLE_HEIGHT / 2: ball_y = right_paddle_y + responsive.PADDLE_HEIGHT / 2
 
-            # Victoire à gauche
+            # Victoire a gauche
             if left_score >= WIN_SCORE:
                 looser_text = font.render(LOOSE_TXT, True, WHITE)
                 looser_text = pygame.transform.rotate(looser_text, 90)
@@ -591,7 +654,7 @@ def main():
                 winner_text = pygame.transform.rotate(winner_text, 270)
                 screen.blit(winner_text, (int(screen.get_width() * 0.25 - responsive.FONT_SIZE / 2), int(screen.get_height() / 2 - (len(WIN_TXT) * responsive.FONT_SIZE / 4)) ))
 
-            # Victoire à droite
+            # Victoire a droite
             if right_score >= WIN_SCORE:
                 winner_text = font.render(WIN_TXT, True, WHITE)
                 winner_text = pygame.transform.rotate(winner_text, 90)
@@ -615,7 +678,7 @@ def main():
         if game_paused == True and ball_replace_timer <= 0:
             game_paused = False
 
-        # Mise à jour et dessin des effets de particules
+        # Mise a jour et dessin des effets de particules
         for particle in dust_effects:
             if len(particle.particles) > 0:
                 particle.update()
@@ -640,18 +703,20 @@ def main():
                 Halo_frame_effects.remove(halo)
                 del halo
 
+        if ball_speed >= responsive.BALL_MAX_SPEED:
+            flame.x = ball_x
+            flame.y = ball_y
+            flame.draw_flame(screen)
+
         draw_frame(screen, WHITE, LINE_WIDTH)
         draw_dashed_line(screen, WHITE, (screen.get_width() / 2, 0), (screen.get_width() / 2, screen.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
         draw_paddles(screen, left_paddle_y, right_paddle_y, responsive.PADDLE_WIDTH, responsive.PADDLE_HEIGHT, LINE_WIDTH)
-        if ball_speed < responsive.BALL_MAX_SPEED:
-            draw_ball(screen, ball_x, ball_y, WHITE, responsive.BALL_SIZE)
-        else:
-            draw_ball(screen, ball_x, ball_y, RED, responsive.BALL_SIZE)
+        draw_ball(screen, ball_x, ball_y, WHITE, responsive.BALL_SIZE)
         draw_score(screen, font, responsive.FONT_SIZE, left_score, right_score)
 
         pygame.display.flip()
 
-        # Limiter la vitesse de la boucle à 60 FPS
+        # Limiter la vitesse de la boucle a 60 FPS
         clock.tick(60)
 
     pygame.quit()
