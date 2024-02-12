@@ -169,7 +169,7 @@ class Firework:
             for particle in self.particles:
                 particle.draw(surface)
 
-class FlameParticle:
+class Flame_particle:
     alpha_layer_qty = 2
     alpha_glow_difference_constant = 2
 
@@ -178,8 +178,8 @@ class FlameParticle:
         self.y = y
         self.r = r
         self.original_r = r
-        self.alpha_layers = FlameParticle.alpha_layer_qty
-        self.alpha_glow = FlameParticle.alpha_glow_difference_constant
+        self.alpha_layers = Flame_particle.alpha_layer_qty
+        self.alpha_glow = Flame_particle.alpha_glow_difference_constant
         max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
         self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
         self.burn_rate = 0.1 * random.randint(1, 4)
@@ -219,13 +219,13 @@ class Flame:
         self.flame_intensity = 2
         self.flame_particles = []
         for i in range(self.flame_intensity * 25):
-            self.flame_particles.append(FlameParticle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
+            self.flame_particles.append(Flame_particle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
 
     def draw_flame(self, surface):
         for i in self.flame_particles:
             if i.original_r <= 0:
                 self.flame_particles.remove(i)
-                self.flame_particles.append(FlameParticle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
+                self.flame_particles.append(Flame_particle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
                 del i
                 continue
             i.update()
@@ -391,7 +391,8 @@ def main():
         ball_x = screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH
         ball_y = right_paddle_y
 
-    flame = Flame(ball_x, ball_y)
+    # Intialisation de l'effet de flamme
+    if not no_effect: flame = Flame(ball_x, ball_y)
 
     running = True
 
