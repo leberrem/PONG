@@ -36,9 +36,6 @@ HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
 WIN_SCORE = 8 # Score a obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
-# Etat initial
-current_player = 0
-
 # Effets visuels
 dust_effects = []
 firework_effects = []
@@ -274,6 +271,7 @@ def help():
         --no-effect : disable visual effects
         --no-sound : disable sound effects
         --fullscreen : display in fullscreen
+        --use-mouse : use mouse control
     """)
     quit()
 
@@ -326,12 +324,15 @@ def main():
     no_effect = False
     no_sound = False
     fullscreen = False
+    use_mouse = False
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if "--no-effect" in sys.argv[i]:
                 no_effect = True
             elif "--no-sound" in sys.argv[i]:
                 no_sound = True
+            elif "--use-mouse" in sys.argv[i]:
+                use_mouse = True
             elif "--fullscreen" in sys.argv[i]:
                 fullscreen = True
             else:
@@ -415,7 +416,7 @@ def main():
                     event_actions.append("LEFT_PADDLE_BUTTON")
                 if event.key == pygame.K_RCTRL:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and use_mouse == True:
                 # Barre gauche - click gauche
                 if event.button == 1:
                     event_actions.append("LEFT_PADDLE_BUTTON")
@@ -425,7 +426,7 @@ def main():
                 # Barre droite - click droite
                 elif event.button == 3:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
-            elif event.type == pygame.MOUSEMOTION:
+            elif event.type == pygame.MOUSEMOTION and use_mouse == True:
                 # Recuperation de la position du curseur
                 mouse_position=event.pos
                 # Barre gauche - mouvement horizontal
