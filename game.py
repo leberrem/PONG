@@ -268,10 +268,10 @@ def help():
 
     Parameters:
         --help : This help message
-        --no-effect : disable visual effects
-        --no-sound : disable sound effects
-        --fullscreen : display in fullscreen
-        --use-mouse : use mouse control
+        --no-effect : Disable visual effects
+        --no-sound : Disable sound effects
+        --fullscreen : Display in fullscreen
+        --use-mouse : Use mouse control
     """)
     quit()
 
