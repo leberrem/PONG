@@ -376,6 +376,8 @@ def main():
     ball_speed = responsive.BALL_INIT_SPEED
     ball_speed_x = 0
     ball_speed_y = 0
+    left_accerlerate_paddle = False
+    right_accerlerate_paddle = False
 
     # Initialisation de la position des raquettes
     left_paddle_y = screen.get_height() / 2
@@ -449,6 +451,10 @@ def main():
                 event_actions.append("RIGHT_PADDLE_UP")
             if keys[pygame.K_DOWN]:
                 event_actions.append("RIGHT_PADDLE_DOWN")
+            if keys[pygame.K_LCTRL]:
+                left_accerlerate_paddle = True
+            if keys[pygame.K_RCTRL]:
+                right_accerlerate_paddle = True
 
         for action in event_actions:
             # --------------------------------------------------------------------------------------------------
@@ -457,28 +463,44 @@ def main():
                     if abs(left_paddle_y - (LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
                         left_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
                     else:
-                        left_paddle_y -= responsive.PADDLE_SPEED
+                        if left_accerlerate_paddle == True :
+                            left_paddle_y -= responsive.PADDLE_SPEED * 2
+                            left_accerlerate_paddle = False
+                        else:
+                            left_paddle_y -= responsive.PADDLE_SPEED
             # --------------------------------------------------------------------------------------------------
             elif action == "LEFT_PADDLE_DOWN":
                 if left_paddle_y <= screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2:
                     if abs(left_paddle_y - (screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
                         left_paddle_y = screen.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
                     else:
-                        left_paddle_y += responsive.PADDLE_SPEED
+                        if left_accerlerate_paddle == True :
+                            left_paddle_y += responsive.PADDLE_SPEED * 2
+                            left_accerlerate_paddle = False
+                        else:
+                            left_paddle_y += responsive.PADDLE_SPEED
             # --------------------------------------------------------------------------------------------------
             elif action == "RIGHT_PADDLE_UP":
                 if right_paddle_y >= LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_HEIGHT / 2:
                     if abs(right_paddle_y - (LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
                         right_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
                     else:
-                        right_paddle_y -= responsive.PADDLE_SPEED
+                        if right_accerlerate_paddle == True :
+                            right_paddle_y -= responsive.PADDLE_SPEED * 2
+                            right_accerlerate_paddle = False
+                        else:
+                            right_paddle_y -= responsive.PADDLE_SPEED
             # --------------------------------------------------------------------------------------------------
             elif action == "RIGHT_PADDLE_DOWN":
                 if right_paddle_y <= screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2:
                     if abs(right_paddle_y - (screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
                         right_paddle_y = screen.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
                     else:
-                        right_paddle_y += responsive.PADDLE_SPEED
+                        if right_accerlerate_paddle == True :
+                            right_paddle_y += responsive.PADDLE_SPEED * 2
+                            right_accerlerate_paddle = False
+                        else:
+                            right_paddle_y += responsive.PADDLE_SPEED
             # --------------------------------------------------------------------------------------------------
             elif action == "LEFT_PADDLE_BUTTON":
                 if not game_started and not game_paused:
