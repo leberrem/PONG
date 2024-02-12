@@ -43,6 +43,7 @@ current_player = 0
 dust_effects = []
 firework_effects = []
 Halo_frame_effects = []
+flame_effects = []
 
 # ####################################################
 # Classes
@@ -378,6 +379,7 @@ def main():
     ball_speed_y = 0
     left_accerlerate_paddle = False
     right_accerlerate_paddle = False
+    ball_in_fire = False
 
     # Initialisation de la position des raquettes
     left_paddle_y = screen.get_height() / 2
@@ -390,9 +392,6 @@ def main():
     elif ( current_player == 2 ):
         ball_x = screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH
         ball_y = right_paddle_y
-
-    # Intialisation de l'effet de flamme
-    if not no_effect: flame = Flame(ball_x, ball_y)
 
     running = True
 
@@ -554,6 +553,7 @@ def main():
                 right_score = 0
                 left_score = 0
                 ball_speed = responsive.BALL_INIT_SPEED
+                ball_in_fire = False
             # --------------------------------------------------------------------------------------------------
             elif action == "EXIT":
                 running = False
@@ -580,6 +580,9 @@ def main():
                 if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
                 ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
+                if abs(ball_speed) >= responsive.BALL_MAX_SPEED and ball_in_fire == False:
+                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y))
+                    ball_in_fire = True
                 ball_speed_x = -ball_speed_x
                 if ball_x < LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2:
                     ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
@@ -596,6 +599,9 @@ def main():
                 if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
                 ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
+                if abs(ball_speed) >= responsive.BALL_MAX_SPEED and ball_in_fire == False:
+                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y))
+                    ball_in_fire = True
                 ball_speed_x = -ball_speed_x
                 if ball_x > screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2:
                     ball_x = screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
@@ -625,6 +631,7 @@ def main():
                 if not no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
                 if right_score >= WIN_SCORE:
                     ball_speed = responsive.BALL_INIT_SPEED
+                    ball_in_fire = False
                     game_started = False
 
             # Sortie de la balle a droite
@@ -645,6 +652,7 @@ def main():
                 if not no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
                 if left_score >= WIN_SCORE:
                     ball_speed = responsive.BALL_INIT_SPEED
+                    ball_in_fire = False
                     game_started = False
 
         else:
@@ -719,6 +727,16 @@ def main():
                 firework_effects.remove(firework)
                 del firework
 
+        for flame in flame_effects:
+            if ball_speed >= responsive.BALL_MAX_SPEED:
+                flame.x = ball_x
+                flame.y = ball_y
+                flame.draw_flame(screen)
+            else:
+                flame_effects.remove(flame)
+                del flame
+
+
         for halo in Halo_frame_effects:
             if halo.count > 0:
                 halo.move()
@@ -726,11 +744,6 @@ def main():
             else:
                 Halo_frame_effects.remove(halo)
                 del halo
-
-        if ball_speed >= responsive.BALL_MAX_SPEED:
-            flame.x = ball_x
-            flame.y = ball_y
-            if not no_effect: flame.draw_flame(screen)
 
         draw_frame(screen, WHITE, LINE_WIDTH)
         draw_dashed_line(screen, WHITE, (screen.get_width() / 2, 0), (screen.get_width() / 2, screen.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
