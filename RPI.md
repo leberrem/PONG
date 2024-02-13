@@ -23,55 +23,42 @@ hdmi_mode=9
 ## Copy game
 
 ```
-scp -r game.* font sound atari@192.168.1.58:~/.
+scp -r game.* font sound pi@192.168.1.58:~/.
 ```
 
 ## auto-start
 
-```
-sudo vi /home/atari/.bashrc
-# -----------------
-if [[ -z $SSH_TTY ]]
-then
-    cd /home/atari
-    ./game.sh
-fi
-# -----------------
-```
+sudo vi /lib/systemd/system/pong.service
 
-## auto-login
+# --------------
+[Unit]
+Description=Start Pong
 
-Run: sudo raspi-config
-- 1 System Options
-- S5 Boot / Auto Login
-- B2 Console Autologin
+[Service]
+Environment=DISPLAY=:0
+WorkingDirectory=/home/pi
+ExecStart=/bin/bash -c '/usr/bin/python3 game.py --fullscreen > game.log 2>&1'
+Restart=always
+RestartSec=10s
+KillMode=process
+TimeoutSec=infinity
 
-# Remove messages
+[Install]
+WantedBy=multi-user.target
+# --------------
 
-```
-sudo update-rc.d motd remove
-sudo su -c 'echo "" > /etc/motd'
-sudo rm -f /etc/update-motd.d/*
-touch ~/.hushlogin
-```
-
-replace "ExecStart=........." command line
-```
-sudo vi /etc/systemd/system/getty@tty1.service.d/autologin.conf
-# -----------------
-ExecStart=-/sbin/agetty --skip-login --noclear --noissue --login-options "-f atari" %I $TERM
-# -----------------
-```
+sudo systemctl daemon-reload
+sudo systemctl enable pong.service
 
 # Splash screen
 
 ```
-scp -r atari atari@192.168.1.58:~/.
+scp -r mkl pi@192.168.1.58:~/.
 ```
 ```
 sudo apt-get -y install plymouth
-sudo mv atari /usr/share/plymouth/themes
-sudo plymouth-set-default-theme atari
+sudo mv mkl /usr/share/plymouth/themes
+sudo plymouth-set-default-theme mkl
 ```
 
 # custom cmdline
@@ -94,3 +81,9 @@ boot_delay=0
 disable_splash=1
 # -----------------
 ```
+
+## change locale
+
+Run: sudo raspi-config
+- 5 Localisation Options
+- L1 Locale

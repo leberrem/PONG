@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Mkl
+Description=This is a plymouth theme which simply displays mkl image
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/mkl
+ScriptFile=/usr/share/plymouth/themes/mkl/mkl.script
