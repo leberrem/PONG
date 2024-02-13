@@ -4,6 +4,7 @@ import random
 import math
 import locale
 import sys
+import traceback
 from pygame.locals import *
 
 # Initialisation de Pygame
@@ -273,7 +274,6 @@ def help():
         --fullscreen : Display in fullscreen
         --use-mouse : Use mouse control
     """)
-    quit()
 
 # Fonction pour dessiner les raquettes
 def draw_paddles(surface, left_paddle_y, right_paddle_y, paddle_with, paddle_height, line_width):
@@ -337,6 +337,7 @@ def main():
                 fullscreen = True
             else:
                 help()
+                quit()
 
     # Chargement des effets sonores
     if not no_sound:
@@ -764,4 +765,10 @@ def main():
 # ####################################################
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        help()
+        print("------------------------------------------------------------")
+        print(traceback.format_exc())
+        quit()
