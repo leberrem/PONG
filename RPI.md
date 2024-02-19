@@ -37,7 +37,7 @@ Description=Start Pong
 [Service]
 Environment=DISPLAY=:0
 WorkingDirectory=/home/pi
-ExecStart=/bin/bash -c '/usr/bin/python3 game.py --fullscreen > game.log 2>&1'
+ExecStart=/bin/bash -c '/usr/bin/python3 game.py --fullscreen'
 Restart=always
 RestartSec=10s
 KillMode=process

@@ -1,13 +1,19 @@
-#!/usr/bin/python3
+#!/usr/bin/python3 -q
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 import random
 import math
 import locale
 import sys
 import traceback
+import logging
+from os import remove
+from os.path import exists
 from pygame.locals import *
 from colorama import init as colorama_init
 from colorama import Fore, Back, Style
+
 
 # Colorama
 # Fore: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
@@ -51,6 +57,7 @@ HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
 WIN_SCORE = 8 # Score a obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
+GPIO_BOUNCE_TIME = 10
 GPIO_ROTARY_LEFT_A = 17
 GPIO_ROTARY_LEFT_B = 27
 
@@ -60,8 +67,13 @@ firework_effects = []
 Halo_frame_effects = []
 flame_effects = []
 
+# Pile des actions à traiter
+event_actions = []
+
 rotation_counter_left = 50
 rotation_counter_right = 50
+
+log_file = "game.log"
 
 # ####################################################
 # Classes
@@ -341,13 +353,14 @@ def help():
     {Fore.YELLOW}|___|    |_______||_|  |__||_______|
     {Style.RESET_ALL}
     \033[4mParameters:\033[0m
-        --help :{Style.DIM} This help message{Style.RESET_ALL}
-        --no-effect :{Style.DIM} Disable visual effects{Style.RESET_ALL}
-        --no-sound :{Style.DIM} Disable sound effects{Style.RESET_ALL}
-        --fullscreen :{Style.DIM} Display in fullscreen{Style.RESET_ALL}
-        --use-mouse :{Style.DIM} Use mouse control (useful for spinner){Style.RESET_ALL}
-        --use-gpio :{Style.DIM} Use GPIO (useful for Raspberry){Style.RESET_ALL}
-        --help-gpio :{Style.DIM} Help on GPIO (useful for Raspberry){Style.RESET_ALL}
+
+    --help :{Style.DIM} This help message{Style.RESET_ALL}
+    --no-effect :{Style.DIM} Disable visual effects{Style.RESET_ALL}
+    --no-sound :{Style.DIM} Disable sound effects{Style.RESET_ALL}
+    --fullscreen :{Style.DIM} Display in fullscreen{Style.RESET_ALL}
+    --use-mouse :{Style.DIM} Use mouse control (useful for spinner){Style.RESET_ALL}
+    --use-gpio :{Style.DIM} Use GPIO (useful for Raspberry){Style.RESET_ALL}
+    --help-gpio :{Style.DIM} Help on GPIO (useful for Raspberry){Style.RESET_ALL}
     """)
 
 # Fonction d'aide sur le connecteur GPIO
@@ -389,35 +402,41 @@ def rotation_decode(channel):
     global rotation_counter_left
     global rotation_counter_right
 
-    Switch_A = GPIO.input(GPIO_ROTARY_LEFT_A)
-    Switch_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+    Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
+    Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
 
-    if (Switch_A == 1) and (Switch_B == 0):
+    if (Switch_Left_A == 1) and (Switch_Left_B == 0):
         rotation_counter_left += 1
-        print("direction -> ", rotation_counter_left)
-        while Switch_B == 0:
-            Switch_B = GPIO.input(GPIO_ROTARY_LEFT_B)
-        while Switch_B == 1:
-            Switch_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+        event_actions.append("LEFT_PADDLE_UP")
+        logging.info("direction -> ", rotation_counter_left)
+        while Switch_Left_B == 0:
+            Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+        while Switch_Left_B == 1:
+            Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
         return
 
-    elif (Switch_A == 1) and (Switch_B == 1):
+    elif (Switch_Left_A == 1) and (Switch_Left_B == 1):
         rotation_counter_left -= 1
-        print("direction <- ", rotation_counter_left)
-        while Switch_A == 1:
-            Switch_A = GPIO.input(GPIO_ROTARY_LEFT_A)
+        event_actions.append("LEFT_PADDLE_DOWN")
+        logging.info("direction <- ", rotation_counter_left)
+        while Switch_Left_A == 1:
+            Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
         return
     else:
         return
 
 # Fonction d'initialisation des interface GPIO
 def init_GPIO(gpio):
-    print("Rotary Encoder Test Program")
+    logging.info("Rotary Encoder Test Program")
     gpio.setwarnings(True)
     gpio.setmode(gpio.BCM)
     gpio.setup(GPIO_ROTARY_LEFT_A, gpio.IN)
     gpio.setup(GPIO_ROTARY_LEFT_B, gpio.IN)
-    gpio.add_event_detect(GPIO_ROTARY_LEFT_A, gpio.RISING, rotation_decode, 10)
+    gpio.add_event_detect(GPIO_ROTARY_LEFT_A, gpio.RISING, rotation_decode, GPIO_BOUNCE_TIME)
+    #– LOW, déclenche l’interrupt quand le pin est a l’état bas
+    #– CHANGE, déclenche l’interrupt quand le pin change d’état ( de bas à haut , ou de haut à bas )
+    #– RISING, sur front montant, il se déclenche seulement quand on va passer d’un état bas à haut
+    #– FALLING, sur front descendant, il se déclenche seulement quand on va passer d’un état haut à bas
     return
 
 # Fonction pour dessiner les raquettes
@@ -474,22 +493,22 @@ def main():
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if "--no-effect" in sys.argv[i]:
-                print("visual effects disabled")
+                logging.info("visual effects disabled")
                 no_effect = True
             elif "--no-sound" in sys.argv[i]:
-                print("sound disabled")
+                logging.info("sound disabled")
                 no_sound = True
             elif "--use-mouse" in sys.argv[i]:
-                print("mouse enabled")
+                logging.info("mouse enabled")
                 use_mouse = True
             elif "--use-gpio" in sys.argv[i]:
-                print("GPIO enabled")
+                logging.info("GPIO enabled")
                 use_gpio = True
             elif "--help-gpio" in sys.argv[i]:
                 help_gpio()
                 quit()
             elif "--fullscreen" in sys.argv[i]:
-                print("fullscreen mode")
+                logging.info("fullscreen mode")
                 fullscreen = True
             else:
                 help()
@@ -563,8 +582,6 @@ def main():
     while running:
 
         screen.fill(BLACK)
-
-        event_actions = []
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -720,6 +737,8 @@ def main():
             # --------------------------------------------------------------------------------------------------
             elif action == "EXIT":
                 running = False
+            # --------------------------------------------------------------------------------------------------
+            event_actions.remove(action) # Purge de l'action
 
         if game_started == True:
 
@@ -927,12 +946,14 @@ def main():
 
 if __name__ == "__main__":
     try:
-        print("------------------------------------------------------------")
-        print("Init Game")
+        if exists(log_file):
+            remove(log_file)
+        logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+        logging.info("Init Game")
         colorama_init()
         main()
     except Exception:
         help()
-        print("------------------------------------------------------------")
         print(traceback.format_exc())
+        logging.error(traceback.format_exc())
         quit()
