@@ -1,6 +1,6 @@
 # Installation
 
-## Pre-requis
+## Pre-requs
 
 Distribution Raspberry Pi OS Lite
 

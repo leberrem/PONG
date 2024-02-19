@@ -6,6 +6,20 @@ import locale
 import sys
 import traceback
 from pygame.locals import *
+from colorama import init as colorama_init
+from colorama import Fore, Back, Style
+
+# Colorama
+# Fore: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
+# Back: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
+# Style: DIM, NORMAL, BRIGHT, RESET_ALL
+
+# Raspberry Pi load GPIO
+_rpiLoaded = True
+try:
+    import RPi.GPIO as GPIO
+except:
+    _rpiLoaded = False
 
 # Initialisation de Pygame
 pygame.mixer.pre_init(44100,-16,2,2048)
@@ -37,15 +51,73 @@ HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
 WIN_SCORE = 8 # Score a obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
+GPIO_ROTARY_LEFT_A = 17
+GPIO_ROTARY_LEFT_B = 27
+
 # Effets visuels
 dust_effects = []
 firework_effects = []
 Halo_frame_effects = []
 flame_effects = []
 
+rotation_counter_left = 50
+rotation_counter_right = 50
+
 # ####################################################
 # Classes
 # ####################################################
+
+class GPIOProxy():
+    BCM = GPIO.BCM if _rpiLoaded else 'BCM'
+
+    HIGH = GPIO.HIGH if _rpiLoaded else 'HIGH'
+    LOW = GPIO.LOW if _rpiLoaded else 'LOW'
+
+    IN = GPIO.IN if _rpiLoaded else 'IN'
+    OUT = GPIO.OUT if _rpiLoaded else 'OUT'
+
+    FALLING = GPIO.FALLING if _rpiLoaded else 'FALLING'
+    RISING = GPIO.RISING if _rpiLoaded else 'RISING'
+    BOTH = GPIO.BOTH if _rpiLoaded else 'BOTH'
+
+    PUD_UP = GPIO.PUD_UP if _rpiLoaded else 'PUD_UP'
+    PUD_DOWN = GPIO.PUD_DOWN if _rpiLoaded else 'PUD_DOWN'
+
+    def setmode(self, *args):
+        if _rpiLoaded:
+            GPIO.setmode(*args)
+        else:
+            pass
+
+    def setwarnings(self, *args):
+        if _rpiLoaded:
+            GPIO.setwarnings(*args)
+        else:
+            pass
+
+    def setup(self, *args):
+        if _rpiLoaded:
+            GPIO.setup(*args)
+        else:
+            pass
+
+    def output(self, *args):
+        if _rpiLoaded:
+            GPIO.output(*args)
+        else:
+            pass
+
+    def add_event_detect(self, *args):
+        if _rpiLoaded:
+            GPIO.add_event_detect(*args)
+        else:
+            pass
+
+    def add_event_callback(self, *args):
+        if _rpiLoaded:
+            GPIO.add_event_callback(*args)
+        else:
+            pass
 
 class responsive_values:
     def __init__(self, width, height):
@@ -257,23 +329,96 @@ class Halo_frame:
 # Fonctions
 # ####################################################
 
+# Fonction d'aide
 def help():
-    print("""
-    _______  _______  __    _  _______
-    |       ||       ||  |  | ||       |
-    |    _  ||   _   ||   |_| ||    ___|
-    |   |_| ||  | |  ||       ||   | __
-    |    ___||  |_|  ||  _    ||   ||  |
-    |   |    |       || | |   ||   |_| |
-    |___|    |_______||_|  |__||_______|
-
-    Parameters:
-        --help : This help message
-        --no-effect : Disable visual effects
-        --no-sound : Disable sound effects
-        --fullscreen : Display in fullscreen
-        --use-mouse : Use mouse control
+    print(f"""
+    {Fore.RED} _______  _______  __    _  _______
+    {Fore.RED}|       ||       ||  |  | ||       |
+    {Fore.MAGENTA}|    _  ||   _   ||   |_| ||    ___|
+    {Fore.BLUE}|   |_| ||  | |  ||       ||   | __
+    {Fore.CYAN}|    ___||  |_|  ||  _    ||   ||  |
+    {Fore.GREEN}|   |    |       || | |   ||   |_| |
+    {Fore.YELLOW}|___|    |_______||_|  |__||_______|
+    {Style.RESET_ALL}
+    \033[4mParameters:\033[0m
+        --help :{Style.DIM} This help message{Style.RESET_ALL}
+        --no-effect :{Style.DIM} Disable visual effects{Style.RESET_ALL}
+        --no-sound :{Style.DIM} Disable sound effects{Style.RESET_ALL}
+        --fullscreen :{Style.DIM} Display in fullscreen{Style.RESET_ALL}
+        --use-mouse :{Style.DIM} Use mouse control (useful for spinner){Style.RESET_ALL}
+        --use-gpio :{Style.DIM} Use GPIO (useful for Raspberry){Style.RESET_ALL}
+        --help-gpio :{Style.DIM} Help on GPIO (useful for Raspberry){Style.RESET_ALL}
     """)
+
+# Fonction d'aide sur le connecteur GPIO
+def help_gpio():
+    print(f"""
+        ****************************************************
+        *           {Fore.CYAN}RASPBERRY Pi GPIO Connector{Style.RESET_ALL}            *
+        ****************************************************
+        *                                                  *
+        *                    Pin 1 Pin2                    *
+        *                 {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                 *
+        *       SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                 *
+        *       SCL1 / {Fore.GREEN}GPIO  3{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
+        *              {Fore.GREEN}GPIO  4{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 14{Style.RESET_ALL} / TXD0      *
+        *                  {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0      *
+        *              {Fore.GREEN}GPIO 17{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 18{Style.RESET_ALL}             *
+        *              {Fore.GREEN}GPIO 27{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
+        *              {Fore.GREEN}GPIO 22{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 23{Style.RESET_ALL}             *
+        *                 {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 24{Style.RESET_ALL}             *
+        *       MOSI / {Fore.GREEN}GPIO 10{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
+        *       MISO / {Fore.GREEN}GPIO  9{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 25{Style.RESET_ALL}             *
+        *       SCLK / {Fore.GREEN}GPIO 11{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  8{Style.RESET_ALL} / CE0#      *
+        *                  {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  7{Style.RESET_ALL} / CE1#      *
+        *      ID_SD / {Fore.GREEN}GPIO  0{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  1{Style.RESET_ALL} / ID_SC     *
+        *              {Fore.GREEN}GPIO  5{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
+        *              {Fore.GREEN}GPIO  6{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 12{Style.RESET_ALL}             *
+        *              {Fore.GREEN}GPIO 13{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
+        *       MISO / {Fore.GREEN}GPIO 19{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 16{Style.RESET_ALL} / CE2#      *
+        *              {Fore.GREEN}GPIO 26{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 20{Style.RESET_ALL} / MOSI      *
+        *                  {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 21{Style.RESET_ALL} / SCLK      *
+        *                   Pin 39 Pin 40                  *
+        *                                                  *
+        ****************************************************
+
+    """)
+
+# Fonction d'initialisation des interface GPIO
+def rotation_decode(channel):
+    global rotation_counter_left
+    global rotation_counter_right
+
+    Switch_A = GPIO.input(GPIO_ROTARY_LEFT_A)
+    Switch_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+
+    if (Switch_A == 1) and (Switch_B == 0):
+        rotation_counter_left += 1
+        print("direction -> ", rotation_counter_left)
+        while Switch_B == 0:
+            Switch_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+        while Switch_B == 1:
+            Switch_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+        return
+
+    elif (Switch_A == 1) and (Switch_B == 1):
+        rotation_counter_left -= 1
+        print("direction <- ", rotation_counter_left)
+        while Switch_A == 1:
+            Switch_A = GPIO.input(GPIO_ROTARY_LEFT_A)
+        return
+    else:
+        return
+
+# Fonction d'initialisation des interface GPIO
+def init_GPIO(gpio):
+    print("Rotary Encoder Test Program")
+    gpio.setwarnings(True)
+    gpio.setmode(gpio.BCM)
+    gpio.setup(GPIO_ROTARY_LEFT_A, gpio.IN)
+    gpio.setup(GPIO_ROTARY_LEFT_B, gpio.IN)
+    gpio.add_event_detect(GPIO_ROTARY_LEFT_A, gpio.RISING, rotation_decode, 10)
+    return
 
 # Fonction pour dessiner les raquettes
 def draw_paddles(surface, left_paddle_y, right_paddle_y, paddle_with, paddle_height, line_width):
@@ -325,19 +470,35 @@ def main():
     no_sound = False
     fullscreen = False
     use_mouse = False
+    use_gpio = False
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if "--no-effect" in sys.argv[i]:
+                print("visual effects disabled")
                 no_effect = True
             elif "--no-sound" in sys.argv[i]:
+                print("sound disabled")
                 no_sound = True
             elif "--use-mouse" in sys.argv[i]:
+                print("mouse enabled")
                 use_mouse = True
+            elif "--use-gpio" in sys.argv[i]:
+                print("GPIO enabled")
+                use_gpio = True
+            elif "--help-gpio" in sys.argv[i]:
+                help_gpio()
+                quit()
             elif "--fullscreen" in sys.argv[i]:
+                print("fullscreen mode")
                 fullscreen = True
             else:
                 help()
                 quit()
+
+    # Initialisation des interface GPIO
+    if use_gpio:
+        gpio = GPIOProxy()
+        init_GPIO(gpio)
 
     # Chargement des effets sonores
     if not no_sound:
@@ -408,7 +569,7 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 event_actions.append("EXIT")
-            elif event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     event_actions.append("EXIT")
                 if event.key == pygame.K_r:
@@ -417,7 +578,7 @@ def main():
                     event_actions.append("LEFT_PADDLE_BUTTON")
                 if event.key == pygame.K_RCTRL:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
-            elif event.type == pygame.MOUSEBUTTONDOWN and use_mouse == True:
+            if event.type == pygame.MOUSEBUTTONDOWN and use_mouse == True:
                 # Barre gauche - click gauche
                 if event.button == 1:
                     event_actions.append("LEFT_PADDLE_BUTTON")
@@ -427,7 +588,7 @@ def main():
                 # Barre droite - click droite
                 elif event.button == 3:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
-            elif event.type == pygame.MOUSEMOTION and use_mouse == True:
+            if event.type == pygame.MOUSEMOTION and use_mouse == True:
                 # Recuperation de la position du curseur
                 mouse_position=event.pos
                 # Barre gauche - mouvement horizontal
@@ -583,7 +744,7 @@ def main():
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
                 ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
                 if abs(ball_speed) >= responsive.BALL_MAX_SPEED and ball_in_fire == False:
-                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y))
+                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y + responsive.BALL_SIZE/2))
                     ball_in_fire = True
                 ball_speed_x = -ball_speed_x
                 if ball_x < LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2:
@@ -602,7 +763,7 @@ def main():
                 ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
                 ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
                 if abs(ball_speed) >= responsive.BALL_MAX_SPEED and ball_in_fire == False:
-                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y))
+                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y + responsive.BALL_SIZE/2))
                     ball_in_fire = True
                 ball_speed_x = -ball_speed_x
                 if ball_x > screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2:
@@ -732,7 +893,7 @@ def main():
         for flame in flame_effects:
             if ball_speed >= responsive.BALL_MAX_SPEED:
                 flame.x = ball_x
-                flame.y = ball_y
+                flame.y = ball_y + responsive.BALL_SIZE/2
                 flame.draw_flame(screen)
             else:
                 flame_effects.remove(flame)
@@ -766,6 +927,9 @@ def main():
 
 if __name__ == "__main__":
     try:
+        print("------------------------------------------------------------")
+        print("Init Game")
+        colorama_init()
         main()
     except Exception:
         help()
