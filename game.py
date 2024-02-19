@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+import platform
 import pygame
 import random
 import math
@@ -13,7 +14,6 @@ from os.path import exists
 from pygame.locals import *
 from colorama import init as colorama_init
 from colorama import Fore, Back, Style
-
 
 # Colorama
 # Fore: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
@@ -948,8 +948,15 @@ if __name__ == "__main__":
     try:
         if exists(log_file):
             remove(log_file)
-        logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-        logging.info("Init Game")
+        logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+        logging.info('----------------------------------------')
+        logging.info('system  : %s' % platform.system())
+        logging.info('machine : %s' % platform.machine())
+        logging.info('CPU     : %s' % os.cpu_count())
+        logging.info('os      : %s' % platform.platform())
+        logging.info('python  : %s' % platform.python_version())
+        logging.info('pygame  : %s' % pygame.ver)
+        logging.info('----------------------------------------')
         colorama_init()
         main()
     except Exception:
