@@ -299,13 +299,13 @@ class Halo_frame:
 # Fonction d'aide
 def help():
     print(f"""
-    {Fore.RED} _______  _______  __    _  _______
-    {Fore.RED}|       ||       ||  |  | ||       |
-    {Fore.MAGENTA}|    _  ||   _   ||   |_| ||    ___|
-    {Fore.BLUE}|   |_| ||  | |  ||       ||   | __
-    {Fore.CYAN}|    ___||  |_|  ||  _    ||   ||  |
-    {Fore.GREEN}|   |    |       || | |   ||   |_| |
-    {Fore.YELLOW}|___|    |_______||_|  |__||_______|
+    {Fore.RED} _______  _______  __    _  _______      _   .
+    {Fore.RED}|       ||       ||  |  | ||       |    | | . _
+    {Fore.MAGENTA}|    _  ||   _   ||   |_| ||    ___|    | |! |_|
+    {Fore.BLUE}|   |_| ||  | |  ||       ||   | __     | | '
+    {Fore.CYAN}|    ___||  |_|  ||  _    ||   ||  |    | |  '
+    {Fore.GREEN}|   |    |       || | |   ||   |_| |    | |
+    {Fore.YELLOW}|___|    |_______||_|  |__||_______|    |_|
     {Style.RESET_ALL}
     \033[4mParameters:\033[0m
 
@@ -549,8 +549,8 @@ def main():
     font = pygame.font.Font("font/SevenSegment.ttf", responsive.FONT_SIZE)
 
     # Valeurs initiales
-    left_score = 7
-    right_score = 7
+    left_score = 0
+    right_score = 0
     game_started = False
     game_paused = False
     ball_replace_timer = 0
