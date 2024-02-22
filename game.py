@@ -1,18 +1,17 @@
 #!/usr/bin/python3
+
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import platform
 import pygame
+import platform
 import random
 import math
 import locale
 import sys
 import traceback
 import logging
-from os import remove
-from os.path import exists
+import colorama
 from pygame.locals import *
-from colorama import init as colorama_init
 from colorama import Fore, Back, Style
 
 # Colorama
@@ -21,11 +20,11 @@ from colorama import Fore, Back, Style
 # Style: DIM, NORMAL, BRIGHT, RESET_ALL
 
 # Raspberry Pi load GPIO
-_rpiLoaded = True
+_rpi_gpio_Loaded = True
 try:
     import RPi.GPIO as GPIO
 except:
-    _rpiLoaded = False
+    _rpi_gpio_Loaded = False
 
 # Initialisation de Pygame
 pygame.mixer.pre_init(44100,-16,2,2048)
@@ -57,7 +56,7 @@ HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
 WIN_SCORE = 8 # Score a obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
-GPIO_BOUNCE_TIME = 10
+GPIO_BOUNCE_TIME = 100
 GPIO_ROTARY_LEFT_A = 17
 GPIO_ROTARY_LEFT_B = 27
 
@@ -79,58 +78,7 @@ log_file = "game.log"
 # Classes
 # ####################################################
 
-class GPIOProxy():
-    BCM = GPIO.BCM if _rpiLoaded else 'BCM'
-
-    HIGH = GPIO.HIGH if _rpiLoaded else 'HIGH'
-    LOW = GPIO.LOW if _rpiLoaded else 'LOW'
-
-    IN = GPIO.IN if _rpiLoaded else 'IN'
-    OUT = GPIO.OUT if _rpiLoaded else 'OUT'
-
-    FALLING = GPIO.FALLING if _rpiLoaded else 'FALLING'
-    RISING = GPIO.RISING if _rpiLoaded else 'RISING'
-    BOTH = GPIO.BOTH if _rpiLoaded else 'BOTH'
-
-    PUD_UP = GPIO.PUD_UP if _rpiLoaded else 'PUD_UP'
-    PUD_DOWN = GPIO.PUD_DOWN if _rpiLoaded else 'PUD_DOWN'
-
-    def setmode(self, *args):
-        if _rpiLoaded:
-            GPIO.setmode(*args)
-        else:
-            pass
-
-    def setwarnings(self, *args):
-        if _rpiLoaded:
-            GPIO.setwarnings(*args)
-        else:
-            pass
-
-    def setup(self, *args):
-        if _rpiLoaded:
-            GPIO.setup(*args)
-        else:
-            pass
-
-    def output(self, *args):
-        if _rpiLoaded:
-            GPIO.output(*args)
-        else:
-            pass
-
-    def add_event_detect(self, *args):
-        if _rpiLoaded:
-            GPIO.add_event_detect(*args)
-        else:
-            pass
-
-    def add_event_callback(self, *args):
-        if _rpiLoaded:
-            GPIO.add_event_callback(*args)
-        else:
-            pass
-
+# ----------------------------------------------------
 class responsive_values:
     def __init__(self, width, height):
         self.ratio = 1/6
@@ -144,6 +92,7 @@ class responsive_values:
         self.FONT_SIZE = int(height*self.ratio*0.8) # Taille de la police de caracteres
         self.DASH_LENGTH = int(height*self.ratio*0.1) # Definition du motif de pointille
 
+# ----------------------------------------------------
 class Dust_particle:
     def __init__(self, x, y, color, direction):
         self.x, self.y = x, y
@@ -168,6 +117,7 @@ class Dust_particle:
         if random.randint(0, 100) < 40:
             self.radius -= 1
 
+# ----------------------------------------------------
 class Dust:
     def __init__(self, x, y, color, direction):
         self.x = x
@@ -190,6 +140,7 @@ class Dust:
         for particle in self.particles:
             particle.draw(surface)
 
+# ----------------------------------------------------
 class Firework_particle:
     def __init__(self, x, y, color):
         self.x = x
@@ -210,6 +161,7 @@ class Firework_particle:
     def draw(self, surface):
         pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.size)
 
+# ----------------------------------------------------
 class Firework:
     def __init__(self, x, y, color, direction):
         self.x = x
@@ -252,6 +204,7 @@ class Firework:
             for particle in self.particles:
                 particle.draw(surface)
 
+# ----------------------------------------------------
 class Flame_particle:
     alpha_layer_qty = 2
     alpha_glow_difference_constant = 2
@@ -295,6 +248,7 @@ class Flame_particle:
             pygame.draw.circle(self.surf, color, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
         surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
 
+# ----------------------------------------------------
 class Flame:
     def __init__(self, x, y):
         self.x = x
@@ -314,6 +268,7 @@ class Flame:
             i.update()
             i.draw(surface)
 
+# ----------------------------------------------------
 class Halo_frame:
     def __init__(self, width, count, speed):
         self.count = count
@@ -359,6 +314,7 @@ def help():
     --no-sound :{Style.DIM} Disable sound effects{Style.RESET_ALL}
     --fullscreen :{Style.DIM} Display in fullscreen{Style.RESET_ALL}
     --use-mouse :{Style.DIM} Use mouse control (useful for spinner){Style.RESET_ALL}
+    --rotate-txt :{Style.DIM} Rotate texte to play face-to-face{Style.RESET_ALL}
     --use-gpio :{Style.DIM} Use GPIO (useful for Raspberry){Style.RESET_ALL}
     --help-gpio :{Style.DIM} Help on GPIO (useful for Raspberry){Style.RESET_ALL}
     """)
@@ -405,10 +361,14 @@ def rotation_decode(channel):
     Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
     Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
 
+    logging.info('--------------------------------')
+    logging.info('Switch_Left_A %s' % Switch_Left_A)
+    logging.info('Switch_Left_B %s' % Switch_Left_B)
+
     if (Switch_Left_A == 1) and (Switch_Left_B == 0):
         rotation_counter_left += 1
         event_actions.append("LEFT_PADDLE_UP")
-        logging.info("direction -> ", rotation_counter_left)
+        logging.info('direction -> %s' % rotation_counter_left)
         while Switch_Left_B == 0:
             Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
         while Switch_Left_B == 1:
@@ -418,7 +378,7 @@ def rotation_decode(channel):
     elif (Switch_Left_A == 1) and (Switch_Left_B == 1):
         rotation_counter_left -= 1
         event_actions.append("LEFT_PADDLE_DOWN")
-        logging.info("direction <- ", rotation_counter_left)
+        logging.info('direction <- %s' % rotation_counter_left)
         while Switch_Left_A == 1:
             Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
         return
@@ -426,15 +386,17 @@ def rotation_decode(channel):
         return
 
 # Fonction d'initialisation des interface GPIO
-def init_GPIO(gpio):
+def init_GPIO():
     logging.info("Rotary Encoder Test Program")
-    gpio.setwarnings(True)
-    gpio.setmode(gpio.BCM)
-    gpio.setup(GPIO_ROTARY_LEFT_A, gpio.IN)
-    gpio.setup(GPIO_ROTARY_LEFT_B, gpio.IN)
-    gpio.add_event_detect(GPIO_ROTARY_LEFT_A, gpio.RISING, rotation_decode, GPIO_BOUNCE_TIME)
-    #– LOW, déclenche l’interrupt quand le pin est a l’état bas
-    #– CHANGE, déclenche l’interrupt quand le pin change d’état ( de bas à haut , ou de haut à bas )
+    GPIO.setwarnings(True)
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(GPIO_ROTARY_LEFT_A, GPIO.IN)
+    GPIO.setup(GPIO_ROTARY_LEFT_B, GPIO.IN)
+    GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH, rotation_decode, GPIO_BOUNCE_TIME)
+    #GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH, rotation_decode)
+    # GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH)
+    # GPIO.add_event_callback(GPIO_ROTARY_LEFT_A, rotation_decode)
+    #– BOTH, déclenche l’interrupt quand le pin change d’état ( de bas à haut , ou de haut à bas )
     #– RISING, sur front montant, il se déclenche seulement quand on va passer d’un état bas à haut
     #– FALLING, sur front descendant, il se déclenche seulement quand on va passer d’un état haut à bas
     return
@@ -449,11 +411,44 @@ def draw_ball(surface, ball_x, ball_y, color, size):
     pygame.draw.rect(surface, color, (int(ball_x-size/2), int(ball_y-size/2), int(size), int(size)))
 
 # Fonction pour afficher le score
-def draw_score(surface, font, font_size, left_score, right_score):
+def draw_score(surface, font, font_size, rotate_txt, left_score, right_score):
     left_text = font.render(str(left_score), True, WHITE)
     right_text = font.render(str(right_score), True, WHITE)
-    surface.blit(left_text, (int(surface.get_width() / 2 - (font_size/2 + 20)), 20))
-    surface.blit(right_text, (int(surface.get_width() / 2 + 20), 20))
+    if rotate_txt:
+        left_text = pygame.transform.rotate(left_text, 270)
+        right_text = pygame.transform.rotate(right_text, 90)
+        surface.blit(left_text, (int(surface.get_width() / 2 - (font_size + 20)), 20))
+        surface.blit(right_text, (int(surface.get_width() / 2 + 20), 20))
+    else:
+        surface.blit(left_text, (int(surface.get_width() / 2 - (font_size/2 + 20)), 10))
+        surface.blit(right_text, (int(surface.get_width() / 2 + 20), 10))
+
+# Fonction pour afficher le score
+def draw_endgame(surface, font, font_size, rotate_txt, left_score, right_score):
+    # Victoire a gauche
+    if left_score >= WIN_SCORE:
+        looser_text = font.render(LOOSE_TXT, True, WHITE)
+        winner_text = font.render(WIN_TXT, True, WHITE)
+        if rotate_txt:
+            looser_text = pygame.transform.rotate(looser_text, 90)
+            surface.blit(looser_text, (int(surface.get_width() * 0.75 - font_size / 2), int(surface.get_height() / 2 - (len(LOOSE_TXT) * font_size / 4)) ))
+            winner_text = pygame.transform.rotate(winner_text, 270)
+            surface.blit(winner_text, (int(surface.get_width() * 0.25 - font_size / 2), int(surface.get_height() / 2 - (len(WIN_TXT) * font_size / 4)) ))
+        else:
+            surface.blit(looser_text, (int(surface.get_width() * 0.75 - (len(LOOSE_TXT) * font_size / 4)), int(surface.get_height() / 2 - (font_size / 2)) ))
+            surface.blit(winner_text, (int(surface.get_width() * 0.25 - (len(WIN_TXT) * font_size / 4)), int(surface.get_height() / 2 - (font_size / 2)) ))
+    # Victoire a droite
+    if right_score >= WIN_SCORE:
+        winner_text = font.render(WIN_TXT, True, WHITE)
+        looser_text = font.render(LOOSE_TXT, True, WHITE)
+        if rotate_txt:
+            winner_text = pygame.transform.rotate(winner_text, 90)
+            surface.blit(winner_text, (int(surface.get_width() * 0.75 - font_size / 2), int(surface.get_height() / 2 - (len(WIN_TXT) * font_size / 4)) ))
+            looser_text = pygame.transform.rotate(looser_text, 270)
+            surface.blit(looser_text, (int(surface.get_width() * 0.25 - font_size / 2), int(surface.get_height() / 2 - (len(LOOSE_TXT) * font_size / 4)) ))
+        else:
+            surface.blit(winner_text, (int(surface.get_width() * 0.75 - (len(WIN_TXT) * font_size / 4)), int(surface.get_height() / 2 - (font_size / 2)) ))
+            surface.blit(looser_text, (int(surface.get_width() * 0.25 - (len(LOOSE_TXT) * font_size / 4)), int(surface.get_height() / 2 - (font_size / 2)) ))
 
 # Fonction pour afficher une ligne en pointilles
 def draw_dashed_line(surface, color, start_pos, end_pos, width=1, dash_length=10):
@@ -490,25 +485,30 @@ def main():
     fullscreen = False
     use_mouse = False
     use_gpio = False
+    rotate_txt = False
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if "--no-effect" in sys.argv[i]:
-                logging.info("visual effects disabled")
+                logging.info("argument : no-effect")
                 no_effect = True
             elif "--no-sound" in sys.argv[i]:
-                logging.info("sound disabled")
+                logging.info("argument : no-sound")
                 no_sound = True
             elif "--use-mouse" in sys.argv[i]:
-                logging.info("mouse enabled")
+                logging.info("argument : use-mouse")
                 use_mouse = True
             elif "--use-gpio" in sys.argv[i]:
-                logging.info("GPIO enabled")
+                logging.info("argument : use-gpio")
                 use_gpio = True
+            elif "--rotate-txt" in sys.argv[i]:
+                logging.info("argument : rotate-txt")
+                rotate_txt = True
             elif "--help-gpio" in sys.argv[i]:
+                logging.info("argument : help-gpio")
                 help_gpio()
                 quit()
             elif "--fullscreen" in sys.argv[i]:
-                logging.info("fullscreen mode")
+                logging.info("argument : fullscreen")
                 fullscreen = True
             else:
                 help()
@@ -516,8 +516,10 @@ def main():
 
     # Initialisation des interface GPIO
     if use_gpio:
-        gpio = GPIOProxy()
-        init_GPIO(gpio)
+        if _rpi_gpio_Loaded:
+            init_GPIO()
+        else:
+            logging.warning("no GPIO found")
 
     # Chargement des effets sonores
     if not no_sound:
@@ -547,8 +549,8 @@ def main():
     font = pygame.font.Font("font/SevenSegment.ttf", responsive.FONT_SIZE)
 
     # Valeurs initiales
-    left_score = 0
-    right_score = 0
+    left_score = 7
+    right_score = 7
     game_started = False
     game_paused = False
     ball_replace_timer = 0
@@ -859,24 +861,6 @@ def main():
                     if ball_y < right_paddle_y - responsive.PADDLE_HEIGHT / 2: ball_y = right_paddle_y - responsive.PADDLE_HEIGHT / 2
                     if ball_y > right_paddle_y + responsive.PADDLE_HEIGHT / 2: ball_y = right_paddle_y + responsive.PADDLE_HEIGHT / 2
 
-            # Victoire a gauche
-            if left_score >= WIN_SCORE:
-                looser_text = font.render(LOOSE_TXT, True, WHITE)
-                looser_text = pygame.transform.rotate(looser_text, 90)
-                screen.blit(looser_text, (int(screen.get_width() * 0.75 - responsive.FONT_SIZE / 2), int(screen.get_height() / 2 - (len(LOOSE_TXT) * responsive.FONT_SIZE / 4)) ))
-                winner_text = font.render(WIN_TXT, True, WHITE)
-                winner_text = pygame.transform.rotate(winner_text, 270)
-                screen.blit(winner_text, (int(screen.get_width() * 0.25 - responsive.FONT_SIZE / 2), int(screen.get_height() / 2 - (len(WIN_TXT) * responsive.FONT_SIZE / 4)) ))
-
-            # Victoire a droite
-            if right_score >= WIN_SCORE:
-                winner_text = font.render(WIN_TXT, True, WHITE)
-                winner_text = pygame.transform.rotate(winner_text, 90)
-                screen.blit(winner_text, (int(screen.get_width() * 0.75 - responsive.FONT_SIZE / 2), int(screen.get_height() / 2 - (len(WIN_TXT) * responsive.FONT_SIZE / 4)) ))
-                looser_text = font.render(LOOSE_TXT, True, WHITE)
-                looser_text = pygame.transform.rotate(looser_text, 270)
-                screen.blit(looser_text, (int(screen.get_width() * 0.25 - responsive.FONT_SIZE / 2), int(screen.get_height() / 2 - (len(LOOSE_TXT) * responsive.FONT_SIZE / 4)) ))
-
         # Replacement de la balle
         if game_paused == True and ball_replace_timer > 0:
             ball_replace_timer -= 1
@@ -931,7 +915,8 @@ def main():
         draw_dashed_line(screen, WHITE, (screen.get_width() / 2, 0), (screen.get_width() / 2, screen.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
         draw_paddles(screen, left_paddle_y, right_paddle_y, responsive.PADDLE_WIDTH, responsive.PADDLE_HEIGHT, LINE_WIDTH)
         draw_ball(screen, ball_x, ball_y, WHITE, responsive.BALL_SIZE)
-        draw_score(screen, font, responsive.FONT_SIZE, left_score, right_score)
+        draw_score(screen, font, responsive.FONT_SIZE, rotate_txt, left_score, right_score)
+        draw_endgame(screen, font, responsive.FONT_SIZE, rotate_txt, left_score, right_score)
 
         pygame.display.flip()
 
@@ -946,9 +931,8 @@ def main():
 
 if __name__ == "__main__":
     try:
-        if exists(log_file):
-            remove(log_file)
-        logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+        if os.path.exists(log_file): os.remove(log_file) # Supprime le fichier de trace précédent
+        logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s | %(levelname)-7s | %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
         logging.info('----------------------------------------')
         logging.info('system  : %s' % platform.system())
         logging.info('machine : %s' % platform.machine())
@@ -957,7 +941,7 @@ if __name__ == "__main__":
         logging.info('python  : %s' % platform.python_version())
         logging.info('pygame  : %s' % pygame.ver)
         logging.info('----------------------------------------')
-        colorama_init()
+        colorama.init()
         main()
     except Exception:
         help()

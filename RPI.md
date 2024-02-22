@@ -8,6 +8,7 @@ Distribution Raspberry Pi OS Lite
 sudo apt update
 sudo apt upgrade
 sudo apt install python3-pygame
+sudo apt install python3-colorama
 ```
 
 ## Resolution 800*600
@@ -37,7 +38,7 @@ Description=Start Pong
 [Service]
 Environment=DISPLAY=:0
 WorkingDirectory=/home/pi
-ExecStart=/bin/bash -c '/usr/bin/python3 game.py --fullscreen'
+ExecStart=/bin/bash -c '/usr/bin/python3 game.py --fullscreen --rotate-txt --use-gpio > game.out 2>&1'
 Restart=always
 RestartSec=10s
 KillMode=process
