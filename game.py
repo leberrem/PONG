@@ -510,13 +510,13 @@ def main():
             elif "--help-gpio" in sys.argv[i]:
                 logging.info("argument : help-gpio")
                 help_gpio()
-                quit()
+                sys.exit()
             elif "--fullscreen" in sys.argv[i]:
                 logging.info("argument : fullscreen")
                 fullscreen = True
             else:
                 help()
-                quit()
+                sys.exit()
 
     # Initialisation des interface GPIO
     if use_gpio:
@@ -952,4 +952,4 @@ if __name__ == "__main__":
         help()
         print(traceback.format_exc())
         logging.error(traceback.format_exc())
-        quit()
+        sys.exit()
