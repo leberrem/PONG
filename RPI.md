@@ -24,7 +24,7 @@ hdmi_mode=9
 ## Copy game
 
 ```
-scp -r game.* font sound pi@192.168.1.58:~/.
+scp -r game.* font sound image pi@192.168.1.58:~/.
 ```
 
 ## auto-start

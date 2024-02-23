@@ -1,4 +1,6 @@
+```
 sudo pip3 install numba
 sudo pip3 install pyinstaller
 
-pyinstaller --onefile game.py -n pong --specpath build --workpath build --distpath . --clean
+pyinstaller --clean --onefile game.py -n pong --workpath build --distpath . --add-data "font/*:." --add-data="sfx/*:." --add-data="image/*:."
+```

@@ -528,13 +528,14 @@ def main():
     # Chargement des effets sonores
     if not no_sound:
         pygame.mixer.set_num_channels(3)
-        paddle_sound = pygame.mixer.Sound("sound/paddle.wav")
-        wall_sound = pygame.mixer.Sound("sound/wall.wav")
-        score_sound = pygame.mixer.Sound("sound/score.wav")
-        start_sound = pygame.mixer.Sound("sound/start.wav")
-        gameover_sound = pygame.mixer.Sound("sound/gameover.wav")
-        laser_sound = pygame.mixer.Sound("sound/laser.wav")
-        explosion_sound = pygame.mixer.Sound("sound/explosion.wav")
+        bundle_sound_dir = getattr(sys, '_MEIPASS', "sfx") # Check if MEIPASS attribute is available in sys else return current file path
+        paddle_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'paddle.wav')))
+        wall_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'wall.wav')))
+        score_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'score.wav')))
+        start_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'start.wav')))
+        gameover_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'gameover.wav')))
+        laser_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'laser.wav')))
+        explosion_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'explosion.wav')))
 
     # Definition du mode d'affichage
     if fullscreen:
@@ -543,14 +544,17 @@ def main():
     else:
         screen = pygame.display.set_mode((800, 600))
         pygame.display.set_caption("Pong")
-        icon = pygame.image.load("logo.png").convert_alpha()
+        bundle_image_dir = getattr(sys, '_MEIPASS', "image") # Check if MEIPASS attribute is available in sys else return current file path
+        icon = pygame.image.load(os.path.abspath(os.path.join(bundle_image_dir,'logo.png'))).convert_alpha()
         pygame.display.set_icon(icon)
 
     # Calcul des valeurs relatives en fonction de la resolution
     responsive = responsive_values(screen.get_width(), screen.get_height())
 
     # chargement de la police de caracteres
-    font = pygame.font.Font("font/SevenSegment.ttf", responsive.FONT_SIZE)
+    bundle_font_dir = getattr(sys, '_MEIPASS', "font") # Check if MEIPASS attribute is available in sys else return current file path
+    path_to_font = os.path.abspath(os.path.join(bundle_font_dir,'SevenSegment.ttf'))
+    font = pygame.font.Font(path_to_font, responsive.FONT_SIZE)
 
     # Valeurs initiales
     left_score = 0
