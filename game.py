@@ -48,7 +48,7 @@ DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT = 0, 1, 2, 3
 
 SPACE_WIDTH = 5 # Taille des espaces
 LINE_WIDTH = 5 # Epaisseurs des lignes
-BALL_ACCELERATION = 1#0.2 # Acceleration de la balle a chaque rebond
+BALL_ACCELERATION = 0.2 # Acceleration de la balle a chaque rebond
 BALL_REPLACE_DURATION = 30 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
