@@ -72,7 +72,7 @@ event_actions = []
 rotation_counter_left = 50
 rotation_counter_right = 50
 
-log_file = "game.log"
+log_file = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".log"
 
 # ####################################################
 # Classes
