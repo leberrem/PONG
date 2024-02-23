@@ -48,14 +48,13 @@ DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT = 0, 1, 2, 3
 
 SPACE_WIDTH = 5 # Taille des espaces
 LINE_WIDTH = 5 # Epaisseurs des lignes
-BALL_ACCELERATION = 0.2 # Acceleration de la balle a chaque rebond
+BALL_ACCELERATION = 1#0.2 # Acceleration de la balle a chaque rebond
 BALL_REPLACE_DURATION = 30 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
 HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
 WIN_SCORE = 8 # Score a obtenir pour gagner
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
-DEFAULT_COLOR = WHITE
 
 GPIO_BOUNCE_TIME = 100
 GPIO_ROTARY_LEFT_A = 17
@@ -229,7 +228,7 @@ class Flame_particle:
         if self.r <= 0:
             self.r = 1
 
-    def draw(self, surface):
+    def draw(self, surface, color):
         max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
         self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
         for i in range(self.alpha_layers, -1, -1):
@@ -237,16 +236,20 @@ class Flame_particle:
             if alpha <= 0:
                 alpha = 0
             radius = self.r * i * i * self.alpha_glow
-            if self.r == 4 or self.r == 3:
-                r, g, b = (255, 0, 0)
-            elif self.r == 2:
-                r, g, b = (255, 150, 0)
-            else:
-                r, g, b = (50, 50, 50)
-            #r, g, b = (0, 0, 255)  # uncomment this to make the flame blue
-            r, g, b = (255, 255, 255)  # uncomment this to make the flame white
-            color = (r, g, b, alpha)
-            pygame.draw.circle(self.surf, color, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
+            # multi-color mode
+            # if self.r == 4 or self.r == 3:
+            #     r, g, b = (255, 0, 0)
+            # elif self.r == 2:
+            #     r, g, b = (255, 150, 0)
+            # else:
+            #     r, g, b = (50, 50, 50)
+            # Blue mode
+            #r, g, b = (0, 0, 255)
+            # White mode
+            #r, g, b = (255, 255, 255)
+            r, g, b = color
+            color_alpha = (r, g, b, alpha)
+            pygame.draw.circle(self.surf, color_alpha, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
         surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
 
 # ----------------------------------------------------
@@ -259,7 +262,7 @@ class Flame:
         for i in range(self.flame_intensity * 25):
             self.flame_particles.append(Flame_particle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
 
-    def draw_flame(self, surface):
+    def draw_flame(self, surface, color):
         for i in self.flame_particles:
             if i.original_r <= 0:
                 self.flame_particles.remove(i)
@@ -267,7 +270,7 @@ class Flame:
                 del i
                 continue
             i.update()
-            i.draw(surface)
+            i.draw(surface, color)
 
 # ----------------------------------------------------
 class Halo_frame:
@@ -899,7 +902,7 @@ def main():
             if ball_speed >= responsive.BALL_MAX_SPEED:
                 flame.x = ball_x
                 flame.y = ball_y + responsive.BALL_SIZE/2
-                flame.draw_flame(screen)
+                flame.draw_flame(screen, main_color)
             else:
                 flame_effects.remove(flame)
                 del flame
