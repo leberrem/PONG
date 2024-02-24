@@ -90,6 +90,7 @@ class responsive_values:
         self.BALL_MAX_SPEED = int(width*self.ratio*0.15)  # Vitesse maximale de deplacemant de la balle
         self.BALL_INERTIA = int(height*self.ratio*0.09) # Inertie de la balle
         self.FONT_SIZE = int(height*self.ratio*0.8) # Taille de la police de caracteres
+        self.FONT_SMALL_SIZE = int(height*self.ratio*0.4) # Taille de la police de caracteres
         self.DASH_LENGTH = int(height*self.ratio*0.1) # Definition du motif de pointille
 
 # ----------------------------------------------------
@@ -321,6 +322,7 @@ def help():
     --rotate-txt :{Style.DIM} Rotate texte to play face-to-face{Style.RESET_ALL}
     --use-gpio :{Style.DIM} Use GPIO (useful for Raspberry){Style.RESET_ALL}
     --help-gpio :{Style.DIM} Help on GPIO (useful for Raspberry){Style.RESET_ALL}
+    --show-fps :{Style.DIM} View Framerate {Style.RESET_ALL}
     """)
 
 # Fonction d'aide sur le connecteur GPIO
@@ -414,6 +416,11 @@ def draw_paddles(surface, color, left_paddle_y, right_paddle_y, paddle_with, pad
 def draw_ball(surface, color, ball_x, ball_y, size):
     pygame.draw.rect(surface, color, (int(ball_x-size/2), int(ball_y-size/2), int(size), int(size)))
 
+# Fonction pour afficher le FPS
+def draw_fps(surface, color, font, text):
+        text = font.render(text, True, color)
+        surface.blit(text, (10, 10))
+
 # Fonction pour afficher le score
 def draw_score(surface, color, font, font_size, rotate_txt, left_score, right_score):
     left_text = font.render(str(left_score), True, color)
@@ -490,6 +497,7 @@ def main():
     use_mouse = False
     use_gpio = False
     rotate_txt = False
+    show_fps = False
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             if "--no-effect" in sys.argv[i]:
@@ -511,6 +519,9 @@ def main():
                 logging.info("argument : help-gpio")
                 help_gpio()
                 sys.exit()
+            elif "--show-fps" in sys.argv[i]:
+                logging.info("argument : show-fps")
+                show_fps = True
             elif "--fullscreen" in sys.argv[i]:
                 logging.info("argument : fullscreen")
                 fullscreen = True
@@ -555,6 +566,7 @@ def main():
     bundle_font_dir = getattr(sys, '_MEIPASS', "font") # Check if MEIPASS attribute is available in sys else return current file path
     path_to_font = os.path.abspath(os.path.join(bundle_font_dir,'SevenSegment.ttf'))
     font = pygame.font.Font(path_to_font, responsive.FONT_SIZE)
+    font_small = pygame.font.Font(path_to_font, responsive.FONT_SMALL_SIZE)
 
     # Valeurs initiales
     left_score = 0
@@ -911,7 +923,6 @@ def main():
                 flame_effects.remove(flame)
                 del flame
 
-
         for halo in Halo_frame_effects:
             if halo.count > 0:
                 halo.move()
@@ -926,6 +937,7 @@ def main():
         draw_ball(screen, main_color, ball_x, ball_y, responsive.BALL_SIZE)
         draw_score(screen, main_color, font, responsive.FONT_SIZE, rotate_txt, left_score, right_score)
         draw_endgame(screen, main_color, font, responsive.FONT_SIZE, rotate_txt, left_score, right_score)
+        if show_fps: draw_fps(screen, main_color, font_small, str(int(clock.get_fps())))
 
         pygame.display.flip()
 
