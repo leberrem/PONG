@@ -11,6 +11,8 @@ import sys
 import traceback
 import logging
 import colorama
+import asyncio
+import time
 from pygame.locals import *
 from colorama import Fore, Back, Style
 
@@ -48,12 +50,15 @@ DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT = 0, 1, 2, 3
 
 SPACE_WIDTH = 5 # Taille des espaces
 LINE_WIDTH = 5 # Epaisseurs des lignes
-BALL_ACCELERATION = 0.2 # Acceleration de la balle a chaque rebond
-BALL_REPLACE_DURATION = 30 # Temps de replacement de la balle sur la raquette
+BALL_ACCELERATION = 10 # Acceleration de la balle a chaque rebond
+BALL_REPLACE_DURATION = 300 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
 HALO_FRAME_WIDTH = 15 # epaisseur maximale du halo
 WIN_SCORE = 8 # Score a obtenir pour gagner
+MAX_FPS = 100 # Vitesse de rafraichessement maximum
+EFFECT_FPS = 60 # Vitesse de l'animation
+WIDTH, HEIGHT = 800, 600 # Resolution d'affichage
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 
 GPIO_BOUNCE_TIME = 100
@@ -84,14 +89,204 @@ class responsive_values:
         self.ratio = 1/6
         self.PADDLE_WIDTH = int(height*self.ratio*0.2) # Taille des raquettes
         self.PADDLE_HEIGHT = int(height*self.ratio) # Taille des raquettes
-        self.PADDLE_SPEED = int(height*self.ratio*0.1) # Vitesse de deplacement des raquettes
+        self.PADDLE_SPEED = int(height*self.ratio*10) # Vitesse de deplacement des raquettes
         self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
-        self.BALL_INIT_SPEED = int(width*self.ratio*0.07)  # Vitesse initiale de deplacemant de la balle
-        self.BALL_MAX_SPEED = int(width*self.ratio*0.15)  # Vitesse maximale de deplacemant de la balle
+        self.BALL_INIT_SPEED = int(width*self.ratio*6)  # Vitesse initiale de deplacemant de la balle
+        self.BALL_MAX_SPEED = int(width*self.ratio*10)  # Vitesse maximale de deplacemant de la balle
         self.BALL_INERTIA = int(height*self.ratio*0.09) # Inertie de la balle
-        self.FONT_SIZE = int(height*self.ratio*0.8) # Taille de la police de caracteres
-        self.FONT_SMALL_SIZE = int(height*self.ratio*0.4) # Taille de la police de caracteres
+        self.FONT_LARGE_SIZE = int(height*self.ratio*0.8) # Taille de la police de caracteres large
+        self.FONT_SMALL_SIZE = int(height*self.ratio*0.4) # Taille de la police de caracteres petite
         self.DASH_LENGTH = int(height*self.ratio*0.1) # Definition du motif de pointille
+
+# ----------------------------------------------------
+class application_values:
+    def __init__(self, surface, responsive):
+        self.main_color = WHITE
+        # ------------------------
+        self._game_started = False
+        self._game_paused = False
+        self._current_player = random.randint(1, 2)
+        self._ball_speed = responsive.BALL_INIT_SPEED
+        self._ball_speed_x = 0
+        self._ball_speed_y = 0
+        self._left_score = 0
+        self._right_score = 0
+        self._ball_replace_timer = 0
+        self._registered_ball_x_position = 0
+        self._registered_ball_y_position = 0
+        self._previous_mouse_position = pygame.mouse.get_pos()
+        self._ball_in_fire = False
+        self._left_paddle_move = "NONE"
+        self._right_paddle_move = "NONE"
+
+        # Initialisation de la position des raquettes
+        self._left_paddle_y = surface.get_height() / 2
+        self._right_paddle_y = surface.get_height() / 2
+
+        # Initialisation de la position de la balle
+        if ( self._current_player == 1 ):
+            self._ball_x = responsive.PADDLE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2 + LINE_WIDTH
+            self._ball_y = self._left_paddle_y
+        elif ( self._current_player == 2 ):
+            self._ball_x = surface.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH
+            self._ball_y = self._right_paddle_y
+
+    @property
+    def current_player(self): return self._current_player
+    @current_player.setter
+    def current_player(self, value): self._current_player = value
+
+    @property
+    def game_started(self): return self._game_started
+    @game_started.setter
+    def game_started(self, value): self._game_started = value
+
+    @property
+    def game_paused(self): return self._game_paused
+    @game_paused.setter
+    def game_paused(self, value): self._game_paused = value
+
+    @property
+    def previous_mouse_position(self): return self._previous_mouse_position
+    @previous_mouse_position.setter
+    def previous_mouse_position(self, value): self._previous_mouse_position = value
+
+    @property
+    def left_score(self): return self._left_score
+    @left_score.setter
+    def left_score(self, value): self._left_score = value
+
+    @property
+    def right_score(self): return self._right_score
+    @right_score.setter
+    def right_score(self, value): self._right_score = value
+
+    @property
+    def ball_replace_timer(self): return self._ball_replace_timer
+    @ball_replace_timer.setter
+    def ball_replace_timer(self, value): self._ball_replace_timer = value
+
+    @property
+    def ball_in_fire(self): return self._ball_in_fire
+    @ball_in_fire.setter
+    def ball_in_fire(self, value): self._ball_in_fire = value
+
+    @property
+    def ball_speed(self): return self._ball_speed
+    @ball_speed.setter
+    def ball_speed(self, value): self._ball_speed = value
+
+    @property
+    def ball_speed_x(self): return self._ball_speed_x
+    @ball_speed_x.setter
+    def ball_speed_x(self, value): self._ball_speed_x = value
+
+    @property
+    def ball_speed_y(self): return self._ball_speed_y
+    @ball_speed_y.setter
+    def ball_speed_y(self, value): self._ball_speed_y = value
+
+    @property
+    def ball_x(self): return self._ball_x
+    @ball_x.setter
+    def ball_x(self, value): self._ball_x = value
+
+    @property
+    def ball_y(self): return self._ball_y
+    @ball_y.setter
+    def ball_y(self, value): self._ball_y = value
+
+    @property
+    def registered_ball_x_position(self): return self._registered_ball_x_position
+    @registered_ball_x_position.setter
+    def registered_ball_x_position(self, value): self._registered_ball_x_position = value
+
+    @property
+    def registered_ball_y_position(self): return self._registered_ball_y_position
+    @registered_ball_y_position.setter
+    def registered_ball_y_position(self, value): self._registered_ball_y_position = value
+
+    @property
+    def right_paddle_y(self): return self._right_paddle_y
+    @right_paddle_y.setter
+    def right_paddle_y(self, value): self._right_paddle_y = value
+
+    @property
+    def left_paddle_y(self): return self._left_paddle_y
+    @left_paddle_y.setter
+    def left_paddle_y(self, value): self._left_paddle_y = value
+
+    @property
+    def right_paddle_move(self): return self._right_paddle_move
+    @right_paddle_move.setter
+    def right_paddle_move(self, value): self._right_paddle_move = value
+
+    @property
+    def left_paddle_move(self): return self._left_paddle_move
+    @left_paddle_move.setter
+    def left_paddle_move(self, value): self._left_paddle_move = value
+
+ # ----------------------------------------------------
+class application_parameters:
+    def __init__(self, argv):
+        self.no_effect = False
+        self.no_sound = False
+        self.fullscreen = False
+        self.use_mouse = False
+        self.use_gpio = False
+        self.rotate_txt = False
+        self.show_fps = False
+        if len(sys.argv) > 1:
+            for i in range(1, len(argv)):
+                if "--no-effect" in argv[i]:
+                    logging.info("argument : no-effect")
+                    self.no_effect = True
+                elif "--no-sound" in argv[i]:
+                    logging.info("argument : no-sound")
+                    self.no_sound = True
+                elif "--use-mouse" in argv[i]:
+                    logging.info("argument : use-mouse")
+                    self.use_mouse = True
+                elif "--use-gpio" in argv[i]:
+                    logging.info("argument : use-gpio")
+                    self.use_gpio = True
+                elif "--rotate-txt" in argv[i]:
+                    logging.info("argument : rotate-txt")
+                    self.rotate_txt = True
+                elif "--help-gpio" in argv[i]:
+                    logging.info("argument : help-gpio")
+                    help_gpio()
+                    sys.exit()
+                elif "--show-fps" in argv[i]:
+                    logging.info("argument : show-fps")
+                    self.show_fps = True
+                elif "--fullscreen" in argv[i]:
+                    logging.info("argument : fullscreen")
+                    self.fullscreen = True
+                else:
+                    help()
+                    sys.exit()
+
+# ----------------------------------------------------
+class font:
+    def __init__(self, responsive):
+        bundle_font_dir = getattr(sys, '_MEIPASS', "font") # Check if MEIPASS attribute is available in sys else return current file path
+        path_to_font = os.path.abspath(os.path.join(bundle_font_dir,'SevenSegment.ttf'))
+        self.font_large = pygame.font.Font(path_to_font, responsive.FONT_LARGE_SIZE)
+        self.font_small = pygame.font.Font(path_to_font, responsive.FONT_SMALL_SIZE)
+
+# ----------------------------------------------------
+class sfx:
+    def __init__(self):
+        pygame.mixer.set_num_channels(3)
+        bundle_sound_dir = getattr(sys, '_MEIPASS', "sfx") # Check if MEIPASS attribute is available in sys else return current file path
+        self.paddle_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'paddle.wav')))
+        self.wall_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'wall.wav')))
+        self.score_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'score.wav')))
+        self.start_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'start.wav')))
+        self.gameover_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'gameover.wav')))
+        self.laser_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'laser.wav')))
+        self.explosion_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'explosion.wav')))
 
 # ----------------------------------------------------
 class Dust_particle:
@@ -263,7 +458,8 @@ class Flame:
         for i in range(self.flame_intensity * 25):
             self.flame_particles.append(Flame_particle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
 
-    def draw_flame(self, surface, color):
+
+    def update_flame(self):
         for i in self.flame_particles:
             if i.original_r <= 0:
                 self.flame_particles.remove(i)
@@ -271,11 +467,14 @@ class Flame:
                 del i
                 continue
             i.update()
+
+    def draw_flame(self, surface, color):
+        for i in self.flame_particles:
             i.draw(surface, color)
 
 # ----------------------------------------------------
 class Halo_frame:
-    def __init__(self, color, width, count, speed):
+    def __init__(self, width, count, speed):
         self.count = count
         self.width = width
         self.speed = speed
@@ -481,468 +680,460 @@ def draw_frame(surface, color, width=1):
     pygame.draw.line(surface, color, (surface.get_width(),surface.get_height()), (0,surface.get_height()), width)
     pygame.draw.line(surface, color, (0,surface.get_height()), (0,0), width)
 
+# Fonction de boucle
+def pygame_event_loop(loop, event_queue):
+
+    logging.info("init event loop")
+
+    while True:
+        event = pygame.event.wait()
+        asyncio.run_coroutine_threadsafe(event_queue.put(event), loop=loop)
+
+# ####################################################
+# Fonction asynchrone de gestion des animations
+# ####################################################
+async def animation(surface, app_param, app_values, font, responsive, sfx):
+
+    logging.info("init animation")
+
+    current_time = 0
+    last_time = 0
+    last_time_effect = 0
+    last_time_fps = 0
+    last_fps = current_fps = 0
+    while True:
+        last_time, current_time = current_time, time.time()
+        await asyncio.sleep(1 / MAX_FPS - (current_time - last_time))  # tick
+
+        if app_values.game_paused == False:
+
+            # déplacement de la raquette gauche
+            if app_values.left_paddle_move == "UP":
+                app_values.left_paddle_y -= (current_time - last_time) * responsive.PADDLE_SPEED
+                if app_values.left_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
+                    app_values.left_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
+            elif app_values.left_paddle_move == "DOWN":
+                app_values.left_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED
+                if app_values.left_paddle_y > surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2:
+                    app_values.left_paddle_y = surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
+
+            # déplacement de la raquette droite
+            if app_values.right_paddle_move == "UP":
+                app_values.right_paddle_y -=  (current_time - last_time) * responsive.PADDLE_SPEED
+                if app_values.right_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
+                    app_values.right_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
+            elif app_values.right_paddle_move == "DOWN":
+                app_values.right_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED
+                if app_values.right_paddle_y > surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2:
+                    app_values.right_paddle_y = surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
+
+        if app_values.game_started == True:
+
+            # déplacement de la balle
+            app_values.ball_x += (current_time - last_time) * app_values.ball_speed_x
+            app_values.ball_y += (current_time - last_time) * app_values.ball_speed_y
+
+            # rebond de la balle sur le haut
+            if app_values.ball_y <= responsive.BALL_SIZE/2:
+                if not app_param.no_sound: pygame.mixer.Channel(2).play(sfx.wall_sound)
+                app_values.ball_y = responsive.BALL_SIZE/2
+                app_values.ball_speed_y = -app_values.ball_speed_y
+                if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x, app_values.ball_y - responsive.BALL_SIZE/2, app_values.main_color, DIRECTION_DOWN))
+
+            # rebond de la balle sur la bas
+            if app_values.ball_y >= surface.get_height() - responsive.BALL_SIZE/2:
+                if not app_param.no_sound: pygame.mixer.Channel(2).play(sfx.wall_sound)
+                app_values.ball_y = surface.get_height() - responsive.BALL_SIZE/2
+                app_values.ball_speed_y = -app_values.ball_speed_y
+                if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x, app_values.ball_y + responsive.BALL_SIZE/2, app_values.main_color, DIRECTION_UP))
+
+            # rebond de la balle sur la raquette gauche
+            if app_values.ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2 and app_values.left_paddle_y - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < app_values.ball_y < app_values.left_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2 :
+                if not app_param.no_sound: pygame.mixer.Channel(1).play(sfx.paddle_sound)
+                app_values.ball_speed += BALL_ACCELERATION * (1 if app_values.ball_speed > 0 else -1)  # Augmentation de la vitesse
+                app_values.ball_speed = max(min(app_values.ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
+                if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_in_fire == False:
+                    if not app_param.no_effect: flame_effects.append(Flame(app_values.ball_x, app_values.ball_y + responsive.BALL_SIZE/2))
+                    app_values.ball_in_fire = True
+                app_values.ball_speed_x = -app_values.ball_speed_x
+                app_values.ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
+                if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x - responsive.BALL_SIZE / 2, app_values.ball_y, app_values.main_color, DIRECTION_RIGHT))
+                # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
+                relative_intersect_y = app_values.left_paddle_y - app_values.ball_y
+                normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
+                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
+                app_values.ball_speed_x = app_values.ball_speed * math.cos(bounce_angle)
+                app_values.ball_speed_y = app_values.ball_speed * -math.sin(bounce_angle)
+
+            # rebond de la balle sur la raquette droite
+            if app_values.ball_x >= surface.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2 and app_values.right_paddle_y  - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < app_values.ball_y < app_values.right_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2:
+                if not app_param.no_sound: pygame.mixer.Channel(1).play(sfx.paddle_sound)
+                app_values.ball_speed += BALL_ACCELERATION * (1 if app_values.ball_speed > 0 else -1)  # Augmentation de la vitesse
+                app_values.ball_speed = max(min(app_values.ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
+                if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_in_fire == False:
+                    if not app_param.no_effect: flame_effects.append(Flame(app_values.ball_x, app_values.ball_y + responsive.BALL_SIZE/2))
+                    app_values.ball_in_fire = True
+                app_values.ball_speed_x = -app_values.ball_speed_x
+                app_values.ball_x = surface.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
+                if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x + responsive.BALL_SIZE / 2, app_values.ball_y, app_values.main_color, DIRECTION_LEFT))
+                # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
+                relative_intersect_y = app_values.right_paddle_y - app_values.ball_y
+                normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
+                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
+                app_values.ball_speed_x = -app_values.ball_speed * math.cos(bounce_angle)
+                app_values.ball_speed_y = app_values.ball_speed * -math.sin(bounce_angle)
+
+            # Sortie de la balle a gauche
+            if app_values.ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2:
+                app_values.right_score += 1
+                if app_values.right_score < WIN_SCORE:
+                    if not app_param.no_sound: pygame.mixer.Channel(0).play(sfx.score_sound)
+                else:
+                    if not app_param.no_sound: pygame.mixer.Channel(0).play(sfx.gameover_sound)
+                app_values.registered_ball_x_position = app_values.ball_x
+                app_values.registered_ball_y_position = app_values.ball_y
+                app_values.ball_speed_x = 0
+                app_values.ball_speed_y = 0
+                app_values.game_started = False
+                app_values.game_paused = True
+                app_values.ball_replace_timer = time.time()
+                app_values.current_player = 1
+                if not app_param.no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
+                if app_values.right_score >= WIN_SCORE:
+                    app_values.ball_speed = responsive.BALL_INIT_SPEED
+                    app_values.ball_in_fire = False
+                    app_values.game_started = False
+
+            # Sortie de la balle a droite
+            if app_values.ball_x >= surface.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2:
+                app_values.left_score += 1
+                if app_values.left_score < WIN_SCORE:
+                    if not app_param.no_sound: pygame.mixer.Channel(0).play(sfx.score_sound)
+                else:
+                    if not app_param.no_sound: pygame.mixer.Channel(0).play(sfx.gameover_sound)
+                app_values.registered_ball_x_position = app_values.ball_x
+                app_values.registered_ball_y_position = app_values.ball_y
+                app_values.ball_speed_x = 0
+                app_values.ball_speed_y = 0
+                app_values.game_started = False
+                app_values.game_paused = True
+                app_values.ball_replace_timer = time.time()
+                app_values.current_player = 2
+                if not app_param.no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
+                if app_values.left_score >= WIN_SCORE:
+                    app_values.ball_speed = responsive.BALL_INIT_SPEED
+                    app_values.ball_in_fire = False
+                    app_values.game_started = False
+
+        else:
+
+            if app_values.game_paused == False:
+
+                # Suivi de la balle sur la raquette
+                app_values.ball_speed_x = 0
+                app_values.ball_speed_y = 0
+                if ( app_values.current_player == 1 ):
+                    app_values.ball_x = responsive.PADDLE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2 + LINE_WIDTH
+                    if abs(app_values.ball_y - app_values.left_paddle_y) < responsive.BALL_INERTIA: app_values.ball_y = app_values.left_paddle_y
+                    if app_values.ball_y < app_values.left_paddle_y: app_values.ball_y += responsive.BALL_INERTIA
+                    if app_values.ball_y > app_values.left_paddle_y: app_values.ball_y -= responsive.BALL_INERTIA
+                    if app_values.ball_y < app_values.left_paddle_y - responsive.PADDLE_HEIGHT / 2: app_values.ball_y = app_values.left_paddle_y - responsive.PADDLE_HEIGHT / 2
+                    if app_values.ball_y > app_values.left_paddle_y + responsive.PADDLE_HEIGHT / 2: app_values.ball_y = app_values.left_paddle_y + responsive.PADDLE_HEIGHT / 2
+                elif ( app_values.current_player == 2 ):
+                    app_values.ball_x = surface.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH
+                    if abs(app_values.ball_y - app_values.right_paddle_y) < responsive.BALL_INERTIA: app_values.ball_y = app_values.right_paddle_y
+                    if app_values.ball_y < app_values.right_paddle_y: app_values.ball_y += responsive.BALL_INERTIA
+                    if app_values.ball_y > app_values.right_paddle_y: app_values.ball_y -= responsive.BALL_INERTIA
+                    if app_values.ball_y < app_values.right_paddle_y - responsive.PADDLE_HEIGHT / 2: app_values.ball_y = app_values.right_paddle_y - responsive.PADDLE_HEIGHT / 2
+                    if app_values.ball_y > app_values.right_paddle_y + responsive.PADDLE_HEIGHT / 2: app_values.ball_y = app_values.right_paddle_y + responsive.PADDLE_HEIGHT / 2
+
+        # Replacement de la balle
+        if app_values.game_paused == True:
+            progress = (time.time() - app_values.ball_replace_timer) * 1000 / BALL_REPLACE_DURATION
+            if progress <= 1:
+                if app_values.current_player == 1:
+                    app_values.ball_x = app_values.registered_ball_x_position - ((app_values.registered_ball_x_position - (responsive.PADDLE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2 + LINE_WIDTH)) * progress)
+                    app_values.ball_y = app_values.registered_ball_y_position - ((app_values.registered_ball_y_position - app_values.left_paddle_y) * progress)
+                if app_values.current_player == 2:
+                    app_values.ball_x = app_values.registered_ball_x_position - ((app_values.registered_ball_x_position - (surface.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH)) * progress)
+                    app_values.ball_y = app_values.registered_ball_y_position - ((app_values.registered_ball_y_position - app_values.right_paddle_y) * progress)
+            else:
+                # Reprise du jeu
+                app_values.game_paused = False
+
+        surface.fill(BLACK)
+
+        # Mise a jour des effets de particules
+        if 1/(current_time - last_time_effect) <= EFFECT_FPS:
+
+            last_time_effect = current_time
+
+            for particle in dust_effects:
+                if len(particle.particles) > 0:
+                    particle.update()
+                else:
+                    dust_effects.remove(particle)
+                    del particle
+
+            for firework in firework_effects:
+                if len(firework.particles) > 0 or firework.exploded == False:
+                    firework.move(surface, app_param.no_sound, sfx.explosion_sound)
+                else:
+                    firework_effects.remove(firework)
+                    del firework
+
+            for flame in flame_effects:
+                if app_values.ball_speed >= responsive.BALL_MAX_SPEED:
+                    flame.x = app_values.ball_x
+                    flame.y = app_values.ball_y + responsive.BALL_SIZE/2
+                    flame.update_flame()
+                else:
+                    flame_effects.remove(flame)
+                    del flame
+
+            for halo in Halo_frame_effects:
+                if halo.count > 0:
+                    halo.move()
+                else:
+                    Halo_frame_effects.remove(halo)
+                    del halo
+
+        # Affichage des effets de particules
+        for particle in dust_effects:
+            if len(particle.particles) > 0:
+                particle.draw(surface)
+        for firework in firework_effects:
+            if len(firework.particles) > 0 or firework.exploded == False:
+                firework.draw(surface)
+        for flame in flame_effects:
+            if app_values.ball_speed >= responsive.BALL_MAX_SPEED:
+                flame.draw_flame(surface, app_values.main_color)
+        for halo in Halo_frame_effects:
+            if halo.count > 0:
+                halo.draw(surface, app_values.main_color)
+
+        # Calcul du FPS moyen
+        if app_param.show_fps:
+            if (current_time - last_time_fps) > 1:
+                last_time_fps = current_time
+                last_fps = int(current_fps)
+                current_fps = int(1/(current_time - last_time))
+            else:
+                current_fps = (current_fps + int(1/(current_time - last_time))) / 2
+
+        draw_frame(surface, app_values.main_color, LINE_WIDTH)
+        draw_dashed_line(surface, app_values.main_color, (surface.get_width() / 2, 0), (surface.get_width() / 2, surface.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
+        draw_paddles(surface, app_values.main_color, app_values.left_paddle_y, app_values.right_paddle_y, responsive.PADDLE_WIDTH, responsive.PADDLE_HEIGHT, LINE_WIDTH)
+        draw_ball(surface, app_values.main_color, app_values.ball_x, app_values.ball_y, responsive.BALL_SIZE)
+        draw_score(surface, app_values.main_color, font.font_large, responsive.FONT_LARGE_SIZE, app_param.rotate_txt, app_values.left_score, app_values.right_score)
+        draw_endgame(surface, app_values.main_color, font.font_large, responsive.FONT_LARGE_SIZE, app_param.rotate_txt, app_values.left_score, app_values.right_score)
+        if app_param.show_fps: draw_fps(surface, app_values.main_color, font.font_small, str(last_fps))
+
+        pygame.display.flip()
+
+# ####################################################
+# Fonction asynchrone de détection des evenements
+# ####################################################
+async def handle_events(event_queue, surface, app_param, app_values, responsive, sfx):
+
+    logging.info("init handle events")
+
+    while True:
+
+        # ==================================================================================================
+        # Catch event
+        event = await event_queue.get()
+
+        #print("event", event)
+
+        if event.type == pygame.QUIT:
+            event_actions.append("EXIT")
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                event_actions.append("EXIT")
+            if event.key == pygame.K_r:
+                event_actions.append("RESET")
+            if event.key == pygame.K_LCTRL:
+                if app_values.game_paused == False:
+                    event_actions.append("LEFT_PADDLE_BUTTON")
+            if event.key == pygame.K_RCTRL:
+                if app_values.game_paused == False:
+                    event_actions.append("RIGHT_PADDLE_BUTTON")
+            if event.key == pygame.K_w or event.key == pygame.K_z:
+                app_values.left_paddle_move = "UP"
+            if event.key == pygame.K_s:
+                app_values.left_paddle_move = "DOWN"
+            if event.key == pygame.K_UP:
+                app_values.right_paddle_move = "UP"
+            if event.key == pygame.K_DOWN:
+                app_values.right_paddle_move = "DOWN"
+
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_w or event.key == pygame.K_z:
+                if app_values.left_paddle_move == "UP": app_values.left_paddle_move = "NONE"
+            if event.key == pygame.K_s:
+                if app_values.left_paddle_move == "DOWN": app_values.left_paddle_move = "NONE"
+            if event.key == pygame.K_UP:
+                if app_values.right_paddle_move == "UP": app_values.right_paddle_move = "NONE"
+            if event.key == pygame.K_DOWN:
+                if app_values.right_paddle_move == "DOWN": app_values.right_paddle_move = "NONE"
+
+        if event.type == pygame.MOUSEBUTTONDOWN and app_param.use_mouse == True:
+            # Barre gauche - click gauche
+            if event.button == 1:
+                event_actions.append("LEFT_PADDLE_BUTTON")
+            # click central
+            elif event.button == 2:
+                event_actions.append("RESET")
+            # Barre droite - click droite
+            elif event.button == 3:
+                event_actions.append("RIGHT_PADDLE_BUTTON")
+
+        if event.type == pygame.MOUSEMOTION and app_param.use_mouse == True:
+            # Recuperation de la position du curseur
+            mouse_position=event.pos
+            # Barre gauche - mouvement horizontal
+            if mouse_position[0] < app_values.previous_mouse_position[0]:
+                app_values.left_paddle_move = "UP"
+            elif mouse_position[0] > app_values.previous_mouse_position[0]:
+                app_values.left_paddle_move = "DOWN"
+            else:
+                app_values.left_paddle_move = "NONE"
+            # Barre droite - mouvement vetical
+            if mouse_position[1] < app_values.previous_mouse_position[1]:
+                app_values.right_paddle_move = "UP"
+            elif mouse_position[1] > app_values.previous_mouse_position[1]:
+                app_values.right_paddle_move = "DOWN"
+            else:
+                app_values.right_paddle_move = "NONE"
+            # Enregistrement de la position du curseur
+            app_values.previous_mouse_position=event.pos
+
+        # ==================================================================================================
+        # Process event
+        for action in event_actions:
+            #print(action)
+            if action == "LEFT_PADDLE_BUTTON":
+                if not app_values.game_started and not app_values.game_paused:
+                    # re-initialisation des scores
+                    if app_values.right_score >= WIN_SCORE:
+                        app_values.right_score = 0
+                        app_values.left_score = 0
+                    # Lancement de la balle a droite
+                    if ( app_values.current_player == 1 ):
+                        if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x-responsive.BALL_SIZE / 2, app_values.ball_y, app_values.main_color, DIRECTION_RIGHT))
+                        # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
+                        relative_intersect_y = app_values.left_paddle_y - app_values.ball_y
+                        normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
+                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
+                        app_values.ball_speed_x = app_values.ball_speed * math.cos(bounce_angle)
+                        app_values.ball_speed_y = app_values.ball_speed * -math.sin(bounce_angle)
+                        app_values.game_started = True
+                    # Feu d'atifice
+                    if ( app_values.current_player == 2  and app_values.left_score >= WIN_SCORE ):
+                        if not app_param.no_effect:
+                            if not app_param.no_sound: pygame.mixer.Channel(1).play(sfx.laser_sound)
+                            firework_color = random.choice(FIREWORK_COLORS)
+                            firework_effects.append(Firework(responsive.PADDLE_WIDTH + SPACE_WIDTH, app_values.left_paddle_y, firework_color, DIRECTION_RIGHT))
+                            dust_effects.append(Dust(responsive.PADDLE_WIDTH + SPACE_WIDTH, app_values.left_paddle_y, firework_color, DIRECTION_RIGHT))
+            # --------------------------------------------------------------------------------------------------
+            elif action == "RIGHT_PADDLE_BUTTON":
+                if not app_values.game_started and not app_values.game_paused:
+                    # re-initialisation des scores
+                    if app_values.left_score >= WIN_SCORE:
+                        app_values.right_score = 0
+                        app_values.left_score = 0
+                    # Lancement de la balle a gauche
+                    if ( app_values.current_player == 2 ):
+                        if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x+responsive.BALL_SIZE / 2, app_values.ball_y, app_values.main_color, DIRECTION_LEFT))
+                        # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
+                        relative_intersect_y = app_values.right_paddle_y - app_values.ball_y
+                        normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
+                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
+                        app_values.ball_speed_x = -app_values.ball_speed * math.cos(bounce_angle)
+                        app_values.ball_speed_y = app_values.ball_speed * -math.sin(bounce_angle)
+                        app_values.game_started = True
+                    # Feu d'atifice
+                    if ( app_values.current_player == 1 and app_values.right_score >= WIN_SCORE):
+                        if not app_param.no_effect:
+                            if not app_param.no_sound: pygame.mixer.Channel(1).play(sfx.laser_sound)
+                            firework_color = random.choice(FIREWORK_COLORS)
+                            firework_effects.append(Firework(surface.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH, app_values.right_paddle_y, firework_color, DIRECTION_LEFT))
+                            dust_effects.append(Dust(surface.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH, app_values.right_paddle_y, firework_color, DIRECTION_LEFT))
+            # --------------------------------------------------------------------------------------------------
+            elif action == "RESET":
+                app_values.right_score = 0
+                app_values.left_score = 0
+                app_values.ball_speed = responsive.BALL_INIT_SPEED
+                app_values.ball_in_fire = False
+            # --------------------------------------------------------------------------------------------------
+            elif action == "EXIT":
+                pygame.QUIT
+                asyncio.get_event_loop().stop()
+            # --------------------------------------------------------------------------------------------------
+            event_actions.remove(action) # Purge de l'action
+
 # ####################################################
 # Fonction principale
 # ####################################################
 
 def main():
 
-    current_player = random.randint(1, 2)
-    clock = pygame.time.Clock()
+    loop = asyncio.get_event_loop()
+    event_queue = asyncio.Queue()
 
     # Controle des parametres d'entree
-    no_effect = False
-    no_sound = False
-    fullscreen = False
-    use_mouse = False
-    use_gpio = False
-    rotate_txt = False
-    show_fps = False
-    if len(sys.argv) > 1:
-        for i in range(1, len(sys.argv)):
-            if "--no-effect" in sys.argv[i]:
-                logging.info("argument : no-effect")
-                no_effect = True
-            elif "--no-sound" in sys.argv[i]:
-                logging.info("argument : no-sound")
-                no_sound = True
-            elif "--use-mouse" in sys.argv[i]:
-                logging.info("argument : use-mouse")
-                use_mouse = True
-            elif "--use-gpio" in sys.argv[i]:
-                logging.info("argument : use-gpio")
-                use_gpio = True
-            elif "--rotate-txt" in sys.argv[i]:
-                logging.info("argument : rotate-txt")
-                rotate_txt = True
-            elif "--help-gpio" in sys.argv[i]:
-                logging.info("argument : help-gpio")
-                help_gpio()
-                sys.exit()
-            elif "--show-fps" in sys.argv[i]:
-                logging.info("argument : show-fps")
-                show_fps = True
-            elif "--fullscreen" in sys.argv[i]:
-                logging.info("argument : fullscreen")
-                fullscreen = True
-            else:
-                help()
-                sys.exit()
+    app_param = application_parameters(sys.argv)
+
+    # pygame.key.set_repeat(20)
+
+    # Definition du mode d'affichage
+    if app_param.fullscreen:
+        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        pygame.mouse.set_visible(False)
+    else:
+        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Pong")
+        bundle_image_dir = getattr(sys, '_MEIPASS', "image") # Check if MEIPASS attribute is available in sys else return current file path
+        icon = pygame.image.load(os.path.abspath(os.path.join(bundle_image_dir,'logo.png'))).convert_alpha()
+        pygame.display.set_icon(icon)
 
     # Initialisation des interface GPIO
-    if use_gpio:
+    if app_param.use_gpio:
         if _rpi_gpio_Loaded:
             init_GPIO()
         else:
             logging.warning("no GPIO found")
 
     # Chargement des effets sonores
-    if not no_sound:
-        pygame.mixer.set_num_channels(3)
-        bundle_sound_dir = getattr(sys, '_MEIPASS', "sfx") # Check if MEIPASS attribute is available in sys else return current file path
-        paddle_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'paddle.wav')))
-        wall_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'wall.wav')))
-        score_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'score.wav')))
-        start_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'start.wav')))
-        gameover_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'gameover.wav')))
-        laser_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'laser.wav')))
-        explosion_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'explosion.wav')))
-
-    # Definition du mode d'affichage
-    if fullscreen:
-        screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-        pygame.mouse.set_visible(False)
-    else:
-        screen = pygame.display.set_mode((800, 600))
-        pygame.display.set_caption("Pong")
-        bundle_image_dir = getattr(sys, '_MEIPASS', "image") # Check if MEIPASS attribute is available in sys else return current file path
-        icon = pygame.image.load(os.path.abspath(os.path.join(bundle_image_dir,'logo.png'))).convert_alpha()
-        pygame.display.set_icon(icon)
+    sfx_lib = None
+    if not app_param.no_sound:
+        sfx_lib = sfx()
 
     # Calcul des valeurs relatives en fonction de la resolution
     responsive = responsive_values(screen.get_width(), screen.get_height())
 
     # chargement de la police de caracteres
-    bundle_font_dir = getattr(sys, '_MEIPASS', "font") # Check if MEIPASS attribute is available in sys else return current file path
-    path_to_font = os.path.abspath(os.path.join(bundle_font_dir,'SevenSegment.ttf'))
-    font = pygame.font.Font(path_to_font, responsive.FONT_SIZE)
-    font_small = pygame.font.Font(path_to_font, responsive.FONT_SMALL_SIZE)
+    font_lib = font(responsive)
 
     # Valeurs initiales
-    left_score = 0
-    right_score = 0
-    game_started = False
-    game_paused = False
-    ball_replace_timer = 0
-    previous_mouse_position = pygame.mouse.get_pos()
-    ball_replace_timer = 0
-    last_ball_x_position = 0
-    last_ball_y_position = 0
-    ball_speed = responsive.BALL_INIT_SPEED
-    ball_speed_x = 0
-    ball_speed_y = 0
-    left_accerlerate_paddle = False
-    right_accerlerate_paddle = False
-    ball_in_fire = False
-    main_color = WHITE
+    app_values = application_values(screen, responsive)
 
-    # Initialisation de la position des raquettes
-    left_paddle_y = screen.get_height() / 2
-    right_paddle_y = screen.get_height() / 2
+    if not app_param.no_sound: pygame.mixer.Channel(0).play(sfx_lib.start_sound)
 
-    # Initialisation de la position de la balle
-    if ( current_player == 1 ):
-        ball_x = responsive.PADDLE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2 + LINE_WIDTH
-        ball_y = left_paddle_y
-    elif ( current_player == 2 ):
-        ball_x = screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH
-        ball_y = right_paddle_y
+    pygame_task = loop.run_in_executor(None, pygame_event_loop, loop, event_queue)
+    animation_task = asyncio.ensure_future(animation(screen, app_param, app_values, font_lib, responsive, sfx_lib))
+    event_task = asyncio.ensure_future(handle_events(event_queue, screen, app_param, app_values, responsive, sfx_lib))
 
-    running = True
-
-    if not no_sound: pygame.mixer.Channel(0).play(start_sound)
-
-    while running:
-
-        screen.fill(BLACK)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                event_actions.append("EXIT")
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    event_actions.append("EXIT")
-                if event.key == pygame.K_r:
-                    event_actions.append("RESET")
-                if event.key == pygame.K_LCTRL:
-                    event_actions.append("LEFT_PADDLE_BUTTON")
-                if event.key == pygame.K_RCTRL:
-                    event_actions.append("RIGHT_PADDLE_BUTTON")
-            if event.type == pygame.MOUSEBUTTONDOWN and use_mouse == True:
-                # Barre gauche - click gauche
-                if event.button == 1:
-                    event_actions.append("LEFT_PADDLE_BUTTON")
-                # click central
-                elif event.button == 2:
-                    event_actions.append("RESET")
-                # Barre droite - click droite
-                elif event.button == 3:
-                    event_actions.append("RIGHT_PADDLE_BUTTON")
-            if event.type == pygame.MOUSEMOTION and use_mouse == True:
-                # Recuperation de la position du curseur
-                mouse_position=event.pos
-                # Barre gauche - mouvement horizontal
-                if mouse_position[0] < previous_mouse_position[0]:
-                    event_actions.append("LEFT_PADDLE_UP")
-                elif mouse_position[0] > previous_mouse_position[0]:
-                    event_actions.append("LEFT_PADDLE_DOWN")
-                # Barre droite - mouvement vetical
-                if mouse_position[1] < previous_mouse_position[1]:
-                    event_actions.append("RIGHT_PADDLE_UP")
-                elif mouse_position[1] > previous_mouse_position[1]:
-                    event_actions.append("RIGHT_PADDLE_DOWN")
-                # Enregistrement de la position du curseur
-                previous_mouse_position=event.pos
-
-        keys = pygame.key.get_pressed()
-        if game_paused == False:
-            if keys[pygame.K_w] or keys[pygame.K_z]:
-                event_actions.append("LEFT_PADDLE_UP")
-            if keys[pygame.K_s]:
-                event_actions.append("LEFT_PADDLE_DOWN")
-            if keys[pygame.K_UP]:
-                event_actions.append("RIGHT_PADDLE_UP")
-            if keys[pygame.K_DOWN]:
-                event_actions.append("RIGHT_PADDLE_DOWN")
-            if keys[pygame.K_LCTRL]:
-                left_accerlerate_paddle = True
-            if keys[pygame.K_RCTRL]:
-                right_accerlerate_paddle = True
-
-        for action in event_actions:
-            # --------------------------------------------------------------------------------------------------
-            if action == "LEFT_PADDLE_UP":
-                if left_paddle_y >= LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_HEIGHT / 2:
-                    if abs(left_paddle_y - (LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
-                        left_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
-                    else:
-                        if left_accerlerate_paddle == True :
-                            left_paddle_y -= responsive.PADDLE_SPEED * 2
-                            left_accerlerate_paddle = False
-                        else:
-                            left_paddle_y -= responsive.PADDLE_SPEED
-            # --------------------------------------------------------------------------------------------------
-            elif action == "LEFT_PADDLE_DOWN":
-                if left_paddle_y <= screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2:
-                    if abs(left_paddle_y - (screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
-                        left_paddle_y = screen.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
-                    else:
-                        if left_accerlerate_paddle == True :
-                            left_paddle_y += responsive.PADDLE_SPEED * 2
-                            left_accerlerate_paddle = False
-                        else:
-                            left_paddle_y += responsive.PADDLE_SPEED
-            # --------------------------------------------------------------------------------------------------
-            elif action == "RIGHT_PADDLE_UP":
-                if right_paddle_y >= LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_HEIGHT / 2:
-                    if abs(right_paddle_y - (LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
-                        right_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
-                    else:
-                        if right_accerlerate_paddle == True :
-                            right_paddle_y -= responsive.PADDLE_SPEED * 2
-                            right_accerlerate_paddle = False
-                        else:
-                            right_paddle_y -= responsive.PADDLE_SPEED
-            # --------------------------------------------------------------------------------------------------
-            elif action == "RIGHT_PADDLE_DOWN":
-                if right_paddle_y <= screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2:
-                    if abs(right_paddle_y - (screen.get_height() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_HEIGHT / 2)) < responsive.PADDLE_SPEED:
-                        right_paddle_y = screen.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
-                    else:
-                        if right_accerlerate_paddle == True :
-                            right_paddle_y += responsive.PADDLE_SPEED * 2
-                            right_accerlerate_paddle = False
-                        else:
-                            right_paddle_y += responsive.PADDLE_SPEED
-            # --------------------------------------------------------------------------------------------------
-            elif action == "LEFT_PADDLE_BUTTON":
-                if not game_started and not game_paused:
-                    # re-initialisation des scores
-                    if right_score >= WIN_SCORE:
-                        right_score = 0
-                        left_score = 0
-                    # Lancement de la balle a droite
-                    if ( current_player == 1 ):
-                        if not no_effect: dust_effects.append(Dust(ball_x-responsive.BALL_SIZE / 2, ball_y, main_color, DIRECTION_RIGHT))
-                        # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
-                        relative_intersect_y = left_paddle_y - ball_y
-                        normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
-                        ball_speed_x = ball_speed * math.cos(bounce_angle)
-                        ball_speed_y = ball_speed * -math.sin(bounce_angle)
-                        game_started = True
-                    # Lancement de la balle a droite
-                    if ( current_player == 2  and left_score >= WIN_SCORE ):
-                        if not no_effect:
-                            if not no_sound: pygame.mixer.Channel(1).play(laser_sound)
-                            firework_color = random.choice(FIREWORK_COLORS)
-                            firework_effects.append(Firework(responsive.PADDLE_WIDTH + SPACE_WIDTH, left_paddle_y, firework_color, DIRECTION_RIGHT))
-                            dust_effects.append(Dust(responsive.PADDLE_WIDTH + SPACE_WIDTH, left_paddle_y, firework_color, DIRECTION_RIGHT))
-            # --------------------------------------------------------------------------------------------------
-            elif action == "RIGHT_PADDLE_BUTTON":
-                if not game_started and not game_paused:
-                    # re-initialisation des scores
-                    if left_score >= WIN_SCORE:
-                        right_score = 0
-                        left_score = 0
-                    # Lancement de la balle a gauche
-                    if ( current_player == 2 ):
-                        if not no_effect: dust_effects.append(Dust(ball_x+responsive.BALL_SIZE / 2, ball_y, main_color, DIRECTION_LEFT))
-                        # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
-                        relative_intersect_y = right_paddle_y - ball_y
-                        normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                        bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
-                        ball_speed_x = -ball_speed * math.cos(bounce_angle)
-                        ball_speed_y = ball_speed * -math.sin(bounce_angle)
-                        game_started = True
-                    if ( current_player == 1 and right_score >= WIN_SCORE):
-                        if not no_effect:
-                            if not no_sound: pygame.mixer.Channel(1).play(laser_sound)
-                            firework_color = random.choice(FIREWORK_COLORS)
-                            firework_effects.append(Firework(screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH, right_paddle_y, firework_color, DIRECTION_LEFT))
-                            dust_effects.append(Dust(screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH, right_paddle_y, firework_color, DIRECTION_LEFT))
-            # --------------------------------------------------------------------------------------------------
-            elif action == "RESET":
-                right_score = 0
-                left_score = 0
-                ball_speed = responsive.BALL_INIT_SPEED
-                ball_in_fire = False
-            # --------------------------------------------------------------------------------------------------
-            elif action == "EXIT":
-                running = False
-            # --------------------------------------------------------------------------------------------------
-            event_actions.remove(action) # Purge de l'action
-
-        if game_started == True:
-
-            ball_x += ball_speed_x
-            ball_y += ball_speed_y
-
-            # rebond de la balle sur le haut
-            if ball_y <= responsive.BALL_SIZE/2:
-                if not no_sound: pygame.mixer.Channel(2).play(wall_sound)
-                ball_speed_y = -ball_speed_y
-                if not no_effect: dust_effects.append(Dust(ball_x, ball_y - responsive.BALL_SIZE/2, main_color, DIRECTION_DOWN))
-
-            # rebond de la balle sur la bas
-            if ball_y >= screen.get_height() - responsive.BALL_SIZE/2:
-                if not no_sound: pygame.mixer.Channel(2).play(wall_sound)
-                ball_speed_y = -ball_speed_y
-                if not no_effect: dust_effects.append(Dust(ball_x, ball_y + responsive.BALL_SIZE/2, main_color, DIRECTION_UP))
-
-            # rebond de la balle sur la raquette gauche
-            if ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2 and left_paddle_y - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < ball_y < left_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2 :
-                if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
-                ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
-                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
-                if abs(ball_speed) >= responsive.BALL_MAX_SPEED and ball_in_fire == False:
-                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y + responsive.BALL_SIZE/2))
-                    ball_in_fire = True
-                ball_speed_x = -ball_speed_x
-                if ball_x < LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2:
-                    ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
-                if not no_effect: dust_effects.append(Dust(ball_x - responsive.BALL_SIZE / 2, ball_y, main_color, DIRECTION_RIGHT))
-                # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
-                relative_intersect_y = left_paddle_y - ball_y
-                normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
-                ball_speed_x = ball_speed * math.cos(bounce_angle)
-                ball_speed_y = ball_speed * -math.sin(bounce_angle)
-
-            # rebond de la balle sur la raquette droite
-            if ball_x >= screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2 and right_paddle_y  - responsive.PADDLE_HEIGHT / 2 - responsive.BALL_SIZE / 2 < ball_y < right_paddle_y + responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2:
-                if not no_sound: pygame.mixer.Channel(1).play(paddle_sound)
-                ball_speed += BALL_ACCELERATION * (1 if ball_speed > 0 else -1)  # Augmentation de la vitesse
-                ball_speed = max(min(ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
-                if abs(ball_speed) >= responsive.BALL_MAX_SPEED and ball_in_fire == False:
-                    if not no_effect: flame_effects.append(Flame(ball_x, ball_y + responsive.BALL_SIZE/2))
-                    ball_in_fire = True
-                ball_speed_x = -ball_speed_x
-                if ball_x > screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2:
-                    ball_x = screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
-                if not no_effect: dust_effects.append(Dust(ball_x + responsive.BALL_SIZE / 2, ball_y, main_color, DIRECTION_LEFT))
-                # Calcul de l'angle de rebond base sur la position relative de la balle sur la raquette
-                relative_intersect_y = right_paddle_y - ball_y
-                normalized_intersect_y = relative_intersect_y / (responsive.PADDLE_HEIGHT / 2 + responsive.BALL_SIZE / 2)
-                bounce_angle = normalized_intersect_y * (math.pi / 4)  # Angle de rebond maximal de pi/4 radians (45 degres)
-                ball_speed_x = -ball_speed * math.cos(bounce_angle)
-                ball_speed_y = ball_speed * -math.sin(bounce_angle)
-
-            # Sortie de la balle a gauche
-            if ball_x <= LINE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2:
-                right_score += 1
-                if right_score < WIN_SCORE:
-                    if not no_sound: pygame.mixer.Channel(0).play(score_sound)
-                else:
-                    if not no_sound: pygame.mixer.Channel(0).play(gameover_sound)
-                last_ball_x_position = ball_x
-                last_ball_y_position = ball_y
-                ball_speed_x = 0
-                ball_speed_y = 0
-                game_started = False
-                game_paused = True
-                ball_replace_timer = BALL_REPLACE_DURATION
-                current_player = 1
-                if not no_effect: Halo_frame_effects.append(Halo_frame(main_color, HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
-                if right_score >= WIN_SCORE:
-                    ball_speed = responsive.BALL_INIT_SPEED
-                    ball_in_fire = False
-                    game_started = False
-
-            # Sortie de la balle a droite
-            if ball_x >= screen.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2:
-                left_score += 1
-                if left_score < WIN_SCORE:
-                    if not no_sound: pygame.mixer.Channel(0).play(score_sound)
-                else:
-                    if not no_sound: pygame.mixer.Channel(0).play(gameover_sound)
-                last_ball_x_position = ball_x
-                last_ball_y_position = ball_y
-                ball_speed_x = 0
-                ball_speed_y = 0
-                game_started = False
-                game_paused = True
-                ball_replace_timer = BALL_REPLACE_DURATION
-                current_player = 2
-                if not no_effect: Halo_frame_effects.append(Halo_frame(main_color, HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
-                if left_score >= WIN_SCORE:
-                    ball_speed = responsive.BALL_INIT_SPEED
-                    ball_in_fire = False
-                    game_started = False
-
-        else:
-
-            if game_paused == False:
-
-                # Suivi de la balle sur la raquette
-                ball_speed_x = 0
-                ball_speed_y = 0
-                if ( current_player == 1 ):
-                    ball_x = responsive.PADDLE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2 + LINE_WIDTH
-                    if abs(ball_y - left_paddle_y) < responsive.BALL_INERTIA: ball_y = left_paddle_y
-                    if ball_y < left_paddle_y: ball_y += responsive.BALL_INERTIA
-                    if ball_y > left_paddle_y: ball_y -= responsive.BALL_INERTIA
-                    if ball_y < left_paddle_y - responsive.PADDLE_HEIGHT / 2: ball_y = left_paddle_y - responsive.PADDLE_HEIGHT / 2
-                    if ball_y > left_paddle_y + responsive.PADDLE_HEIGHT / 2: ball_y = left_paddle_y + responsive.PADDLE_HEIGHT / 2
-                elif ( current_player == 2 ):
-                    ball_x = screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH
-                    if abs(ball_y - right_paddle_y) < responsive.BALL_INERTIA: ball_y = right_paddle_y
-                    if ball_y < right_paddle_y: ball_y += responsive.BALL_INERTIA
-                    if ball_y > right_paddle_y: ball_y -= responsive.BALL_INERTIA
-                    if ball_y < right_paddle_y - responsive.PADDLE_HEIGHT / 2: ball_y = right_paddle_y - responsive.PADDLE_HEIGHT / 2
-                    if ball_y > right_paddle_y + responsive.PADDLE_HEIGHT / 2: ball_y = right_paddle_y + responsive.PADDLE_HEIGHT / 2
-
-        # Replacement de la balle
-        if game_paused == True and ball_replace_timer > 0:
-            ball_replace_timer -= 1
-            percent = ball_replace_timer / BALL_REPLACE_DURATION
-            if current_player == 1:
-                ball_x = (responsive.PADDLE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2 + LINE_WIDTH) - (((responsive.PADDLE_WIDTH + SPACE_WIDTH + responsive.BALL_SIZE / 2) - last_ball_x_position) * percent)
-                ball_y = left_paddle_y - ((left_paddle_y - last_ball_y_position) * percent)
-            if current_player == 2:
-                ball_x = (screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2 - LINE_WIDTH) - (((screen.get_width() - responsive.PADDLE_WIDTH - SPACE_WIDTH - responsive.BALL_SIZE / 2) - last_ball_x_position) * percent)
-                ball_y = right_paddle_y - ((right_paddle_y - last_ball_y_position) * percent)
-
-        # Reprise du jeu
-        if game_paused == True and ball_replace_timer <= 0:
-            game_paused = False
-
-        # Mise a jour et dessin des effets de particules
-        for particle in dust_effects:
-            if len(particle.particles) > 0:
-                particle.update()
-                particle.draw(screen)
-            else:
-                dust_effects.remove(particle)
-                del particle
-
-        for firework in firework_effects:
-            if len(firework.particles) > 0 or firework.exploded == False:
-                firework.move(screen, no_sound, explosion_sound)
-                firework.draw(screen)
-            else:
-                firework_effects.remove(firework)
-                del firework
-
-        for flame in flame_effects:
-            if ball_speed >= responsive.BALL_MAX_SPEED:
-                flame.x = ball_x
-                flame.y = ball_y + responsive.BALL_SIZE/2
-                flame.draw_flame(screen, main_color)
-            else:
-                flame_effects.remove(flame)
-                del flame
-
-        for halo in Halo_frame_effects:
-            if halo.count > 0:
-                halo.move()
-                halo.draw(screen, main_color)
-            else:
-                Halo_frame_effects.remove(halo)
-                del halo
-
-        draw_frame(screen, main_color, LINE_WIDTH)
-        draw_dashed_line(screen, main_color, (screen.get_width() / 2, 0), (screen.get_width() / 2, screen.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
-        draw_paddles(screen, main_color, left_paddle_y, right_paddle_y, responsive.PADDLE_WIDTH, responsive.PADDLE_HEIGHT, LINE_WIDTH)
-        draw_ball(screen, main_color, ball_x, ball_y, responsive.BALL_SIZE)
-        draw_score(screen, main_color, font, responsive.FONT_SIZE, rotate_txt, left_score, right_score)
-        draw_endgame(screen, main_color, font, responsive.FONT_SIZE, rotate_txt, left_score, right_score)
-        if show_fps: draw_fps(screen, main_color, font_small, str(int(clock.get_fps())))
-
-        pygame.display.flip()
-
-        # Limiter la vitesse de la boucle a 60 FPS
-        clock.tick(60)
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        pygame_task.cancel()
+        animation_task.cancel()
+        event_task.cancel()
 
     pygame.quit()
 
