@@ -701,6 +701,7 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
     last_time_effect = 0
     last_time_fps = 0
     last_fps = current_fps = 0
+    count_fps = 1
     while True:
         last_time, current_time = current_time, time.time()
         await asyncio.sleep(1 / MAX_FPS - (current_time - last_time))  # tick
@@ -914,12 +915,14 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
 
         # Calcul du FPS moyen
         if app_param.show_fps:
-            if (current_time - last_time_fps) > 1:
+            if (current_time - last_time_fps) > 0.5:
                 last_time_fps = current_time
-                last_fps = int(current_fps)
+                last_fps = int(current_fps / count_fps)
                 current_fps = int(1/(current_time - last_time))
+                count_fps = 1
             else:
-                current_fps = (current_fps + int(1/(current_time - last_time))) / 2
+                current_fps += int(1/(current_time - last_time))
+                count_fps += 1
 
         draw_frame(surface, app_values.main_color, LINE_WIDTH)
         draw_dashed_line(surface, app_values.main_color, (surface.get_width() / 2, 0), (surface.get_width() / 2, surface.get_height()), LINE_WIDTH, responsive.DASH_LENGTH)
