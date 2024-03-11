@@ -60,6 +60,7 @@ MAX_FPS = 100 # Vitesse de rafraichessement maximum
 EFFECT_FPS = 60 # Vitesse de l'animation
 WIDTH, HEIGHT = 800, 600 # Resolution d'affichage
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
+PADDLE_DECELERATE_MOUSE = 50 # Facteur de desceleration de la vitesse de déplacement des raquettes à la souris
 
 GPIO_BOUNCE_TIME = 100
 GPIO_ROTARY_LEFT_A = 17
@@ -89,7 +90,8 @@ class responsive_values:
         self.ratio = 1/6
         self.PADDLE_WIDTH = int(height*self.ratio*0.2) # Taille des raquettes
         self.PADDLE_HEIGHT = int(height*self.ratio) # Taille des raquettes
-        self.PADDLE_SPEED = int(height*self.ratio*10) # Vitesse de deplacement des raquettes
+        self.PADDLE_SPEED_KEYBOARD = int(height*self.ratio*10) # Vitesse de deplacement des raquettes
+        self.PADDLE_SPEED_MOUSE = int(height*self.ratio/3) # Vitesse de deplacement des raquettes
         self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
         self.BALL_INIT_SPEED = int(width*self.ratio*6)  # Vitesse initiale de deplacemant de la balle
         self.BALL_MAX_SPEED = int(width*self.ratio*10)  # Vitesse maximale de deplacemant de la balle
@@ -114,7 +116,6 @@ class application_values:
         self._ball_replace_timer = 0
         self._registered_ball_x_position = 0
         self._registered_ball_y_position = 0
-        self._previous_mouse_position = pygame.mouse.get_pos()
         self._ball_in_fire = False
         self._left_paddle_move = "NONE"
         self._right_paddle_move = "NONE"
@@ -145,11 +146,6 @@ class application_values:
     def game_paused(self): return self._game_paused
     @game_paused.setter
     def game_paused(self, value): self._game_paused = value
-
-    @property
-    def previous_mouse_position(self): return self._previous_mouse_position
-    @previous_mouse_position.setter
-    def previous_mouse_position(self, value): self._previous_mouse_position = value
 
     @property
     def left_score(self): return self._left_score
@@ -698,6 +694,8 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
 
     current_time = 0
     last_time = 0
+    last_move_left = 0
+    last_move_right = 0
     last_time_effect = 0
     last_time_fps = 0
     last_fps = current_fps = 0
@@ -709,24 +707,44 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
         if app_values.game_paused == False:
 
             # déplacement de la raquette gauche
-            if app_values.left_paddle_move == "UP":
-                app_values.left_paddle_y -= (current_time - last_time) * responsive.PADDLE_SPEED
-                if app_values.left_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
-                    app_values.left_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
-            elif app_values.left_paddle_move == "DOWN":
-                app_values.left_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED
-                if app_values.left_paddle_y > surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2:
-                    app_values.left_paddle_y = surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
+            if app_values.left_paddle_move == "MOUSE_UP":
+                app_values.left_paddle_y -=  responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
+                app_values.left_paddle_move = "NONE"
+                last_move_left = current_time
+            elif app_values.left_paddle_move == "MOUSE_DOWN":
+                app_values.left_paddle_y +=  responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
+                app_values.left_paddle_move = "NONE"
+                last_move_left = current_time
+            elif app_values.left_paddle_move == "KEYBOARD_UP":
+                app_values.left_paddle_y -= (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+            elif app_values.left_paddle_move == "KEYBOARD_DOWN":
+                app_values.left_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+
+            # Limites de déplacement de la raquette gauche
+            if app_values.left_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
+                app_values.left_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
+            if app_values.left_paddle_y > surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2:
+                app_values.left_paddle_y = surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
 
             # déplacement de la raquette droite
-            if app_values.right_paddle_move == "UP":
-                app_values.right_paddle_y -=  (current_time - last_time) * responsive.PADDLE_SPEED
-                if app_values.right_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
-                    app_values.right_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
-            elif app_values.right_paddle_move == "DOWN":
-                app_values.right_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED
-                if app_values.right_paddle_y > surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2:
-                    app_values.right_paddle_y = surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
+            if app_values.right_paddle_move == "MOUSE_UP":
+                app_values.right_paddle_y -= responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
+                app_values.right_paddle_move = "NONE"
+                last_move_right = current_time
+            elif app_values.right_paddle_move == "MOUSE_DOWN":
+                app_values.right_paddle_y += responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
+                app_values.right_paddle_move = "NONE"
+                last_move_right = current_time
+            elif app_values.right_paddle_move == "KEYBOARD_UP":
+                app_values.right_paddle_y -=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+            elif app_values.right_paddle_move == "KEYBOARD_DOWN":
+                app_values.right_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+
+            # Limites de déplacement de la raquette droite
+            if app_values.right_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
+                app_values.right_paddle_y = LINE_WIDTH + responsive.PADDLE_HEIGHT / 2
+            if app_values.right_paddle_y > surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2:
+                app_values.right_paddle_y = surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
 
         if app_values.game_started == True:
 
@@ -964,23 +982,23 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
                 if app_values.game_paused == False:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
             if event.key == pygame.K_w or event.key == pygame.K_z:
-                app_values.left_paddle_move = "UP"
+                app_values.left_paddle_move = "KEYBOARD_UP"
             if event.key == pygame.K_s:
-                app_values.left_paddle_move = "DOWN"
+                app_values.left_paddle_move = "KEYBOARD_DOWN"
             if event.key == pygame.K_UP:
-                app_values.right_paddle_move = "UP"
+                app_values.right_paddle_move = "KEYBOARD_UP"
             if event.key == pygame.K_DOWN:
-                app_values.right_paddle_move = "DOWN"
+                app_values.right_paddle_move = "KEYBOARD_DOWN"
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_w or event.key == pygame.K_z:
-                if app_values.left_paddle_move == "UP": app_values.left_paddle_move = "NONE"
+                if app_values.left_paddle_move == "KEYBOARD_UP": app_values.left_paddle_move = "NONE"
             if event.key == pygame.K_s:
-                if app_values.left_paddle_move == "DOWN": app_values.left_paddle_move = "NONE"
+                if app_values.left_paddle_move == "KEYBOARD_DOWN": app_values.left_paddle_move = "NONE"
             if event.key == pygame.K_UP:
-                if app_values.right_paddle_move == "UP": app_values.right_paddle_move = "NONE"
+                if app_values.right_paddle_move == "KEYBOARD_UP": app_values.right_paddle_move = "NONE"
             if event.key == pygame.K_DOWN:
-                if app_values.right_paddle_move == "DOWN": app_values.right_paddle_move = "NONE"
+                if app_values.right_paddle_move == "KEYBOARD_DOWN": app_values.right_paddle_move = "NONE"
 
         if event.type == pygame.MOUSEBUTTONDOWN and app_param.use_mouse == True:
             # Barre gauche - click gauche
@@ -995,23 +1013,17 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
 
         if event.type == pygame.MOUSEMOTION and app_param.use_mouse == True:
             # Recuperation de la position du curseur
-            mouse_position=event.pos
+            rel_x, rel_y = event.rel
             # Barre gauche - mouvement horizontal
-            if mouse_position[0] < app_values.previous_mouse_position[0]:
-                app_values.left_paddle_move = "UP"
-            elif mouse_position[0] > app_values.previous_mouse_position[0]:
-                app_values.left_paddle_move = "DOWN"
-            else:
-                app_values.left_paddle_move = "NONE"
+            if rel_x < 0:
+                app_values.left_paddle_move = "MOUSE_UP" #-responsive.PADDLE_SPEED_MOUSE
+            elif rel_x > 0:
+                app_values.left_paddle_move = "MOUSE_DOWN" # responsive.PADDLE_SPEED_MOUSE
             # Barre droite - mouvement vetical
-            if mouse_position[1] < app_values.previous_mouse_position[1]:
-                app_values.right_paddle_move = "UP"
-            elif mouse_position[1] > app_values.previous_mouse_position[1]:
-                app_values.right_paddle_move = "DOWN"
-            else:
-                app_values.right_paddle_move = "NONE"
-            # Enregistrement de la position du curseur
-            app_values.previous_mouse_position=event.pos
+            if rel_y < 0:
+                app_values.right_paddle_move = "MOUSE_UP" #-responsive.PADDLE_SPEED_MOUSE
+            elif rel_y > 0:
+                app_values.right_paddle_move = "MOUSE_DOWN" # responsive.PADDLE_SPEED_MOUSE
 
         # ==================================================================================================
         # Process event
@@ -1122,6 +1134,11 @@ def main():
 
     # Valeurs initiales
     app_values = application_values(screen, responsive)
+
+    # Position initiale de la souris
+    if not app_param.use_mouse:
+        pygame.mouse.set_visible(False)
+        pygame.mouse.set_pos(screen.get_width()/2, screen.get_height()/2)
 
     if not app_param.no_sound: pygame.mixer.Channel(0).play(sfx_lib.start_sound)
 
