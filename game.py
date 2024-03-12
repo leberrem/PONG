@@ -95,7 +95,7 @@ class responsive_values:
         self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
         self.BALL_INIT_SPEED = int(width*self.ratio*6)  # Vitesse initiale de deplacemant de la balle
         self.BALL_MAX_SPEED = int(width*self.ratio*10)  # Vitesse maximale de deplacemant de la balle
-        self.BALL_INERTIA = int(height*self.ratio*0.07) # Inertie de suivi de la balle sur la raquette
+        self.BALL_INERTIA = int(height*self.ratio*0.06) # Inertie de suivi de la balle sur la raquette
         self.FONT_LARGE_SIZE = int(height*self.ratio*0.8) # Taille de la police de caracteres large
         self.FONT_SMALL_SIZE = int(height*self.ratio*0.4) # Taille de la police de caracteres petite
         self.DASH_LENGTH = int(height*self.ratio*0.1) # Definition du motif de pointille
@@ -708,11 +708,13 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
 
             # déplacement de la raquette gauche
             if app_values.left_paddle_move == "MOUSE_UP":
-                app_values.left_paddle_y -=  responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
+                decelerate = ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
+                app_values.left_paddle_y -=  responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
                 app_values.left_paddle_move = "NONE"
                 last_move_left = current_time
             elif app_values.left_paddle_move == "MOUSE_DOWN":
-                app_values.left_paddle_y +=  responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
+                decelerate = ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
+                app_values.left_paddle_y +=  responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
                 app_values.left_paddle_move = "NONE"
                 last_move_left = current_time
             elif app_values.left_paddle_move == "KEYBOARD_UP":
@@ -728,11 +730,13 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
 
             # déplacement de la raquette droite
             if app_values.right_paddle_move == "MOUSE_UP":
-                app_values.right_paddle_y -= responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
+                decelerate = ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
+                app_values.right_paddle_y -= responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
                 app_values.right_paddle_move = "NONE"
                 last_move_right = current_time
             elif app_values.right_paddle_move == "MOUSE_DOWN":
-                app_values.right_paddle_y += responsive.PADDLE_SPEED_MOUSE / ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
+                decelerate = ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
+                app_values.right_paddle_y += responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
                 app_values.right_paddle_move = "NONE"
                 last_move_right = current_time
             elif app_values.right_paddle_move == "KEYBOARD_UP":
