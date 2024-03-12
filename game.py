@@ -70,7 +70,7 @@ GPIO_ROTARY_LEFT_B = 27
 dust_effects = []
 firework_effects = []
 Halo_frame_effects = []
-flame_effects = []
+shiny_effects = []
 
 # Pile des actions à traiter
 event_actions = []
@@ -469,6 +469,67 @@ class Flame:
             i.draw(surface, color)
 
 # ----------------------------------------------------
+class Shiny_particle:
+    alpha_layer_qty = 2
+    alpha_glow_difference_constant = 2
+
+    def __init__(self, x, y, r=5):
+        self.x = x
+        self.y = y
+        self.r = r
+        self.original_r = r
+        self.alpha_layers = Shiny_particle.alpha_layer_qty
+        self.alpha_glow = Shiny_particle.alpha_glow_difference_constant
+        max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
+        self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
+        self.burn_rate = 0.1 * random.randint(1, 4)
+
+    def update(self):
+        #self.y -= 7 - self.r
+        #self.x += random.randint(-self.r, self.r)
+        self.original_r -= self.burn_rate
+        self.r = int(self.original_r)
+        if self.r <= 0:
+            self.r = 1
+
+    def draw(self, surface, color):
+        max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
+        self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
+        for i in range(self.alpha_layers, -1, -1):
+            alpha = 255 - i * (255 // self.alpha_layers - 5)
+            if alpha <= 0:
+                alpha = 0
+            radius = self.r * i * i * self.alpha_glow
+            r, g, b = color
+            color_alpha = (r, g, b, alpha)
+            pygame.draw.circle(self.surf, color_alpha, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
+        surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
+
+# ----------------------------------------------------
+class Shiny:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.shiny_intensity = 2
+        self.shiny_particles = []
+        for i in range(self.shiny_intensity * 25):
+            self.shiny_particles.append(Shiny_particle(self.x, self.y, random.randint(1, 5)))
+
+
+    def update_shiny(self):
+        for i in self.shiny_particles:
+            if i.original_r <= 0:
+                self.shiny_particles.remove(i)
+                self.shiny_particles.append(Shiny_particle(self.x, self.y, random.randint(1, 5)))
+                del i
+                continue
+            i.update()
+
+    def draw_shiny(self, surface, color):
+        for i in self.shiny_particles:
+            i.draw(surface, color)
+
+# ----------------------------------------------------
 class Halo_frame:
     def __init__(self, width, count, speed):
         self.count = count
@@ -776,7 +837,7 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 app_values.ball_speed += BALL_ACCELERATION * (1 if app_values.ball_speed > 0 else -1)  # Augmentation de la vitesse
                 app_values.ball_speed = max(min(app_values.ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
                 if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_in_fire == False:
-                    if not app_param.no_effect: flame_effects.append(Flame(app_values.ball_x, app_values.ball_y + responsive.BALL_SIZE/2))
+                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y))
                     app_values.ball_in_fire = True
                 app_values.ball_speed_x = -app_values.ball_speed_x
                 app_values.ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
@@ -794,7 +855,7 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 app_values.ball_speed += BALL_ACCELERATION * (1 if app_values.ball_speed > 0 else -1)  # Augmentation de la vitesse
                 app_values.ball_speed = max(min(app_values.ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
                 if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_in_fire == False:
-                    if not app_param.no_effect: flame_effects.append(Flame(app_values.ball_x, app_values.ball_y + responsive.BALL_SIZE/2))
+                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y))
                     app_values.ball_in_fire = True
                 app_values.ball_speed_x = -app_values.ball_speed_x
                 app_values.ball_x = surface.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
@@ -905,14 +966,14 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                     firework_effects.remove(firework)
                     del firework
 
-            for flame in flame_effects:
+            for shiny in shiny_effects:
                 if app_values.ball_speed >= responsive.BALL_MAX_SPEED:
-                    flame.x = app_values.ball_x
-                    flame.y = app_values.ball_y + responsive.BALL_SIZE/2
-                    flame.update_flame()
+                    shiny.x = app_values.ball_x
+                    shiny.y = app_values.ball_y
+                    shiny.update_shiny()
                 else:
-                    flame_effects.remove(flame)
-                    del flame
+                    shiny_effects.remove(shiny)
+                    del shiny
 
             for halo in Halo_frame_effects:
                 if halo.count > 0:
@@ -928,9 +989,9 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
         for firework in firework_effects:
             if len(firework.particles) > 0 or firework.exploded == False:
                 firework.draw(surface)
-        for flame in flame_effects:
+        for shiny in shiny_effects:
             if app_values.ball_speed >= responsive.BALL_MAX_SPEED:
-                flame.draw_flame(surface, app_values.main_color)
+                shiny.draw_shiny(surface, app_values.main_color)
         for halo in Halo_frame_effects:
             if halo.count > 0:
                 halo.draw(surface, app_values.main_color)
