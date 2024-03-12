@@ -62,9 +62,13 @@ WIDTH, HEIGHT = 800, 600 # Resolution d'affichage
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
 PADDLE_DECELERATE_MOUSE = 50 # Facteur de desceleration de la vitesse de déplacement des raquettes à la souris
 
-GPIO_BOUNCE_TIME = 100
-GPIO_ROTARY_LEFT_A = 17
-GPIO_ROTARY_LEFT_B = 27
+# GPIO_BOUNCE_TIME = 100
+# GPIO_ROTARY_LEFT_A = 17
+# GPIO_ROTARY_LEFT_B = 27
+GPIO_BUTTON_LEFT = 23
+GPIO_BUTTON_RIGHT = 25
+GPIO_BUTTON_RIGHT_EVENT = pygame.USEREVENT + 1
+GPIO_BUTTON_LEFT_EVENT = pygame.USEREVENT + 2
 
 # Effets visuels
 dust_effects = []
@@ -616,52 +620,53 @@ def help_gpio():
     """)
 
 # Fonction d'initialisation des interface GPIO
-def rotation_decode(channel):
-    global rotation_counter_left
-    global rotation_counter_right
+# def rotation_decode(channel):
+#     global rotation_counter_left
+#     global rotation_counter_right
 
-    Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
-    Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+#     Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
+#     Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
 
-    logging.info('--------------------------------')
-    logging.info('Switch_Left_A %s' % Switch_Left_A)
-    logging.info('Switch_Left_B %s' % Switch_Left_B)
+#     logging.info('--------------------------------')
+#     logging.info('Switch_Left_A %s' % Switch_Left_A)
+#     logging.info('Switch_Left_B %s' % Switch_Left_B)
 
-    if (Switch_Left_A == 1) and (Switch_Left_B == 0):
-        rotation_counter_left += 1
-        event_actions.append("LEFT_PADDLE_UP")
-        logging.info('direction -> %s' % rotation_counter_left)
-        while Switch_Left_B == 0:
-            Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
-        while Switch_Left_B == 1:
-            Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
-        return
+#     if (Switch_Left_A == 1) and (Switch_Left_B == 0):
+#         rotation_counter_left += 1
+#         event_actions.append("LEFT_PADDLE_UP")
+#         logging.info('direction -> %s' % rotation_counter_left)
+#         while Switch_Left_B == 0:
+#             Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+#         while Switch_Left_B == 1:
+#             Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
+#         return
 
-    elif (Switch_Left_A == 1) and (Switch_Left_B == 1):
-        rotation_counter_left -= 1
-        event_actions.append("LEFT_PADDLE_DOWN")
-        logging.info('direction <- %s' % rotation_counter_left)
-        while Switch_Left_A == 1:
-            Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
-        return
-    else:
-        return
+#     elif (Switch_Left_A == 1) and (Switch_Left_B == 1):
+#         rotation_counter_left -= 1
+#         event_actions.append("LEFT_PADDLE_DOWN")
+#         logging.info('direction <- %s' % rotation_counter_left)
+#         while Switch_Left_A == 1:
+#             Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
+#         return
+#     else:
+#         return
 
 # Fonction d'initialisation des interface GPIO
 def init_GPIO():
     logging.info("Rotary Encoder Test Program")
     GPIO.setwarnings(True)
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(GPIO_ROTARY_LEFT_A, GPIO.IN)
-    GPIO.setup(GPIO_ROTARY_LEFT_B, GPIO.IN)
-    GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH, rotation_decode, GPIO_BOUNCE_TIME)
+    #GPIO.setup(GPIO_ROTARY_LEFT_A, GPIO.IN)
+    #GPIO.setup(GPIO_ROTARY_LEFT_B, GPIO.IN)
+    #GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH, rotation_decode, GPIO_BOUNCE_TIME)
     #GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH, rotation_decode)
     # GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH)
     # GPIO.add_event_callback(GPIO_ROTARY_LEFT_A, rotation_decode)
     #– BOTH, déclenche l’interrupt quand le pin change d’état ( de bas à haut , ou de haut à bas )
     #– RISING, sur front montant, il se déclenche seulement quand on va passer d’un état bas à haut
     #– FALLING, sur front descendant, il se déclenche seulement quand on va passer d’un état haut à bas
-    return
+    GPIO.setup(GPIO_BUTTON_LEFT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(GPIO_BUTTON_RIGHT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Fonction pour dessiner les raquettes
 def draw_paddles(surface, color, left_paddle_y, right_paddle_y, paddle_with, paddle_height, line_width):
@@ -1090,6 +1095,12 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
             elif rel_y > 0:
                 app_values.right_paddle_move = "MOUSE_DOWN"
 
+        if event.type == GPIO_BUTTON_LEFT_EVENT:
+                event_actions.append("LEFT_PADDLE_BUTTON")
+
+        if event.type == GPIO_BUTTON_RIGHT_EVENT:
+                event_actions.append("RIGHT_PADDLE_BUTTON")
+
         # ==================================================================================================
         # Process event
         for action in event_actions:
@@ -1155,6 +1166,34 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
             event_actions.remove(action) # Purge de l'action
 
 # ####################################################
+# Fonction asynchrone de détection des evenements GPIO
+# ####################################################
+async def handle_gpio(event_queue, surface, app_param, app_values, responsive, sfx):
+
+    logging.info("init GPIO events")
+    previous_button_left = GPIO.HIGH
+    previous_button_right = GPIO.HIGH
+
+    while True:
+        # Lecture de l'état du bouton
+        button_left = GPIO.input(GPIO_BUTTON_LEFT)
+        button_right = GPIO.input(GPIO_BUTTON_RIGHT)
+
+        if button_left == GPIO.LOW and previous_button_left == GPIO.HIGH:
+            if app_values.game_paused == False:
+                pygame.event.post(pygame.event.Event(GPIO_BUTTON_LEFT_EVENT))
+
+        if button_right == GPIO.LOW and previous_button_right == GPIO.HIGH:
+            if app_values.game_paused == False:
+                pygame.event.post(pygame.event.Event(GPIO_BUTTON_RIGHT_EVENT))
+
+        # Enregistrement de l'état des boutons
+        previous_button_left = button_left
+        previous_button_right = button_right
+
+        await asyncio.sleep(0.1)
+
+# ####################################################
 # Fonction principale
 # ####################################################
 
@@ -1210,6 +1249,7 @@ def main():
     pygame_task = loop.run_in_executor(None, pygame_event_loop, loop, event_queue)
     animation_task = asyncio.ensure_future(animation(screen, app_param, app_values, font_lib, responsive, sfx_lib))
     event_task = asyncio.ensure_future(handle_events(event_queue, screen, app_param, app_values, responsive, sfx_lib))
+    if app_param.use_gpio: gpio_task = asyncio.ensure_future(handle_gpio(event_queue, screen, app_param, app_values, responsive, sfx_lib))
 
     try:
         loop.run_forever()
@@ -1219,6 +1259,7 @@ def main():
         pygame_task.cancel()
         animation_task.cancel()
         event_task.cancel()
+        if app_param.use_gpio: gpio_task.cancel()
 
     pygame.quit()
 
