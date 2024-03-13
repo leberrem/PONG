@@ -67,8 +67,10 @@ PADDLE_DECELERATE_MOUSE = 50 # Facteur de desceleration de la vitesse de déplac
 # GPIO_ROTARY_LEFT_B = 27
 GPIO_BUTTON_LEFT = 23
 GPIO_BUTTON_RIGHT = 25
+GPIO_BUTTON_RESET = 12
 GPIO_BUTTON_RIGHT_EVENT = pygame.USEREVENT + 1
 GPIO_BUTTON_LEFT_EVENT = pygame.USEREVENT + 2
+GPIO_BUTTON_RESET_EVENT = pygame.USEREVENT + 3
 
 # Effets visuels
 dust_effects = []
@@ -588,34 +590,34 @@ def help():
 # Fonction d'aide sur le connecteur GPIO
 def help_gpio():
     print(f"""
-        ****************************************************
-        *           {Fore.CYAN}RASPBERRY Pi GPIO Connector{Style.RESET_ALL}            *
-        ****************************************************
-        *                                                  *
-        *                    Pin 1 Pin2                    *
-        *                 {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                 *
-        *       SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                 *
-        *       SCL1 / {Fore.GREEN}GPIO  3{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
-        *              {Fore.GREEN}GPIO  4{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 14{Style.RESET_ALL} / TXD0      *
-        *                  {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0      *
-        *              {Fore.GREEN}GPIO 17{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 18{Style.RESET_ALL}             *
-        *              {Fore.GREEN}GPIO 27{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
-        *              {Fore.GREEN}GPIO 22{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 23{Style.RESET_ALL}             *
-        *                 {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 24{Style.RESET_ALL}             *
-        *       MOSI / {Fore.GREEN}GPIO 10{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
-        *       MISO / {Fore.GREEN}GPIO  9{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 25{Style.RESET_ALL}             *
-        *       SCLK / {Fore.GREEN}GPIO 11{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  8{Style.RESET_ALL} / CE0#      *
-        *                  {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  7{Style.RESET_ALL} / CE1#      *
-        *      ID_SD / {Fore.GREEN}GPIO  0{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  1{Style.RESET_ALL} / ID_SC     *
-        *              {Fore.GREEN}GPIO  5{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
-        *              {Fore.GREEN}GPIO  6{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 12{Style.RESET_ALL}             *
-        *              {Fore.GREEN}GPIO 13{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                 *
-        *       MISO / {Fore.GREEN}GPIO 19{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 16{Style.RESET_ALL} / CE2#      *
-        *              {Fore.GREEN}GPIO 26{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 20{Style.RESET_ALL} / MOSI      *
-        *                  {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 21{Style.RESET_ALL} / SCLK      *
-        *                   Pin 39 Pin 40                  *
-        *                                                  *
-        ****************************************************
+        **********************************************************************************
+        *                          {Fore.CYAN}RASPBERRY Pi GPIO Connector{Style.RESET_ALL}                           *
+        **********************************************************************************
+        *                                                                                *
+        *                                   Pin 1 Pin2                                   *
+        *                                {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                                *
+        *                      SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                                *
+        *                      SCL1 / {Fore.GREEN}GPIO  3{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                                *
+        *                             {Fore.GREEN}GPIO  4{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 14{Style.RESET_ALL} / TXD0                     *
+        *                                 {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0                     *
+        *                             {Fore.GREEN}GPIO 17{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 18{Style.RESET_ALL}                            *
+        *                             {Fore.GREEN}GPIO 27{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} -----------------[SWITCH LEFT] *
+        *                             {Fore.GREEN}GPIO 22{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 23{Style.RESET_ALL} -------------[SWITCH LEFT] *
+        *                                {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 24{Style.RESET_ALL}                            *
+        *                      MOSI / {Fore.GREEN}GPIO 10{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ----------------[SWITCH RIGHT] *
+        *                      MISO / {Fore.GREEN}GPIO  9{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 25{Style.RESET_ALL} ------------[SWITCH RIGHT] *
+        *                      SCLK / {Fore.GREEN}GPIO 11{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  8{Style.RESET_ALL} / CE0#                     *
+        *                                 {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  7{Style.RESET_ALL} / CE1#                     *
+        *                     ID_SD / {Fore.GREEN}GPIO  0{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  1{Style.RESET_ALL} / ID_SC                    *
+        *                             {Fore.GREEN}GPIO  5{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ----------------[SWITCH RESET] *
+        *                             {Fore.GREEN}GPIO  6{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 12{Style.RESET_ALL} ------------[SWITCH RESET] *
+        *                             {Fore.GREEN}GPIO 13{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                                *
+        *                      MISO / {Fore.GREEN}GPIO 19{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 16{Style.RESET_ALL} / CE2#                     *
+        *                             {Fore.GREEN}GPIO 26{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 20{Style.RESET_ALL} / MOSI                     *
+        *                                 {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 21{Style.RESET_ALL} / SCLK                     *
+        *                                  Pin 39 Pin 40                                 *
+        *                                                                                *
+        **********************************************************************************
 
     """)
 
@@ -667,6 +669,7 @@ def init_GPIO():
     #– FALLING, sur front descendant, il se déclenche seulement quand on va passer d’un état haut à bas
     GPIO.setup(GPIO_BUTTON_LEFT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(GPIO_BUTTON_RIGHT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(GPIO_BUTTON_RESET, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Fonction pour dessiner les raquettes
 def draw_paddles(surface, color, left_paddle_y, right_paddle_y, paddle_with, paddle_height, line_width):
@@ -1101,6 +1104,9 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
         if event.type == GPIO_BUTTON_RIGHT_EVENT:
                 event_actions.append("RIGHT_PADDLE_BUTTON")
 
+        if event.type == GPIO_BUTTON_RESET_EVENT:
+                event_actions.append("RESET")
+
         # ==================================================================================================
         # Process event
         for action in event_actions:
@@ -1173,11 +1179,13 @@ async def handle_gpio(event_queue, surface, app_param, app_values, responsive, s
     logging.info("init GPIO events")
     previous_button_left = GPIO.HIGH
     previous_button_right = GPIO.HIGH
+    previous_button_reset = GPIO.HIGH
 
     while True:
         # Lecture de l'état du bouton
         button_left = GPIO.input(GPIO_BUTTON_LEFT)
         button_right = GPIO.input(GPIO_BUTTON_RIGHT)
+        button_reset = GPIO.input(GPIO_BUTTON_RESET)
 
         if button_left == GPIO.LOW and previous_button_left == GPIO.HIGH:
             if app_values.game_paused == False:
@@ -1187,9 +1195,14 @@ async def handle_gpio(event_queue, surface, app_param, app_values, responsive, s
             if app_values.game_paused == False:
                 pygame.event.post(pygame.event.Event(GPIO_BUTTON_RIGHT_EVENT))
 
+        if button_reset == GPIO.LOW and previous_button_reset == GPIO.HIGH:
+            if app_values.game_paused == False:
+                pygame.event.post(pygame.event.Event(GPIO_BUTTON_RESET_EVENT))
+
         # Enregistrement de l'état des boutons
         previous_button_left = button_left
         previous_button_right = button_right
+        previous_button_reset = button_reset
 
         await asyncio.sleep(0.1)
 
