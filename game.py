@@ -65,12 +65,12 @@ PADDLE_DECELERATE_MOUSE = 50 # Facteur de desceleration de la vitesse de déplac
 # GPIO_BOUNCE_TIME = 100
 # GPIO_ROTARY_LEFT_A = 17
 # GPIO_ROTARY_LEFT_B = 27
-GPIO_BUTTON_LEFT = 23
-GPIO_BUTTON_RIGHT = 25
-GPIO_BUTTON_RESET = 12
-GPIO_BUTTON_RIGHT_EVENT = pygame.USEREVENT + 1
-GPIO_BUTTON_LEFT_EVENT = pygame.USEREVENT + 2
-GPIO_BUTTON_RESET_EVENT = pygame.USEREVENT + 3
+GPIO_BUTTON_LEFT = 23 # Port GPIO du bouton du joueur de gauche
+GPIO_BUTTON_RIGHT = 25 # Port GPIO du bouton du joueur de droite
+GPIO_BUTTON_RESET = 12 # Port GPIO du bouton reset
+GPIO_BUTTON_RIGHT_EVENT = pygame.USEREVENT + 1 # Evenement personnalisé du bouton du joueur de gauche
+GPIO_BUTTON_LEFT_EVENT = pygame.USEREVENT + 2 # Evenement personnalisé du bouton du joueur de droite
+GPIO_BUTTON_RESET_EVENT = pygame.USEREVENT + 3 # Evenement personnalisé du bouton reset
 
 # Effets visuels
 dust_effects = []
@@ -86,11 +86,13 @@ rotation_counter_right = 50
 
 log_file = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".log"
 
-# ####################################################
+# ############################################################################################################################################################
 # Classes
-# ####################################################
+# ############################################################################################################################################################
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class responsive_values
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class responsive_values:
     def __init__(self, width, height):
         self.ratio = 1/6
@@ -106,7 +108,9 @@ class responsive_values:
         self.FONT_SMALL_SIZE = int(height*self.ratio*0.4) # Taille de la police de caracteres petite
         self.DASH_LENGTH = int(height*self.ratio*0.1) # Definition du motif de pointille
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class application_values
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class application_values:
     def __init__(self, surface, responsive):
         self.main_color = WHITE
@@ -228,7 +232,9 @@ class application_values:
     @left_paddle_move.setter
     def left_paddle_move(self, value): self._left_paddle_move = value
 
- # ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class application_parameters
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class application_parameters:
     def __init__(self, argv):
         self.no_effect = False
@@ -269,7 +275,9 @@ class application_parameters:
                     help()
                     sys.exit()
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class font
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class font:
     def __init__(self, responsive):
         bundle_font_dir = getattr(sys, '_MEIPASS', "font") # Check if MEIPASS attribute is available in sys else return current file path
@@ -277,7 +285,9 @@ class font:
         self.font_large = pygame.font.Font(path_to_font, responsive.FONT_LARGE_SIZE)
         self.font_small = pygame.font.Font(path_to_font, responsive.FONT_SMALL_SIZE)
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class sfx
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class sfx:
     def __init__(self):
         pygame.mixer.set_num_channels(3)
@@ -290,7 +300,9 @@ class sfx:
         self.laser_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'laser.wav')))
         self.explosion_sound = pygame.mixer.Sound(os.path.abspath(os.path.join(bundle_sound_dir,'explosion.wav')))
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Dust_particle
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Dust_particle:
     def __init__(self, x, y, color, direction):
         self.x, self.y = x, y
@@ -315,7 +327,9 @@ class Dust_particle:
         if random.randint(0, 100) < 40:
             self.radius -= 1
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Dust
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Dust:
     def __init__(self, x, y, color, direction):
         self.x = x
@@ -338,7 +352,9 @@ class Dust:
         for particle in self.particles:
             particle.draw(surface)
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Firework_particle
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Firework_particle:
     def __init__(self, x, y, color):
         self.x = x
@@ -359,7 +375,9 @@ class Firework_particle:
     def draw(self, surface):
         pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.size)
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Firework
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Firework:
     def __init__(self, x, y, color, direction):
         self.x = x
@@ -402,7 +420,9 @@ class Firework:
             for particle in self.particles:
                 particle.draw(surface)
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Flame_particle
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Flame_particle:
     alpha_layer_qty = 2
     alpha_glow_difference_constant = 2
@@ -450,7 +470,9 @@ class Flame_particle:
             pygame.draw.circle(self.surf, color_alpha, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
         surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Flame
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Flame:
     def __init__(self, x, y):
         self.x = x
@@ -474,7 +496,9 @@ class Flame:
         for i in self.flame_particles:
             i.draw(surface, color)
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Shiny_particle
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Shiny_particle:
     alpha_layer_qty = 2
     alpha_glow_difference_constant = 2
@@ -511,7 +535,9 @@ class Shiny_particle:
             pygame.draw.circle(self.surf, color_alpha, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
         surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Shiny
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Shiny:
     def __init__(self, x, y):
         self.x = x
@@ -535,7 +561,9 @@ class Shiny:
         for i in self.shiny_particles:
             i.draw(surface, color)
 
-# ----------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Class Halo_frame
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Halo_frame:
     def __init__(self, width, count, speed):
         self.count = count
@@ -559,11 +587,13 @@ class Halo_frame:
         pygame.draw.line(surface, color, (surface.get_width(),surface.get_height()), (0,surface.get_height()), self.line_width)
         pygame.draw.line(surface, color, (0,surface.get_height()), (0,0), self.line_width)
 
-# ####################################################
+# ############################################################################################################################################################
 # Fonctions
-# ####################################################
+# ############################################################################################################################################################
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction d'aide
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def help():
     print(f"""
     {Fore.RED} _______  _______  __    _  _______      _   .
@@ -587,7 +617,9 @@ def help():
     --show-fps :{Style.DIM} View Framerate {Style.RESET_ALL}
     """)
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction d'aide sur le connecteur GPIO
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def help_gpio():
     print(f"""
         **********************************************************************************
@@ -621,7 +653,9 @@ def help_gpio():
 
     """)
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction d'initialisation des interface GPIO
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # def rotation_decode(channel):
 #     global rotation_counter_left
 #     global rotation_counter_right
@@ -653,7 +687,9 @@ def help_gpio():
 #     else:
 #         return
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction d'initialisation des interface GPIO
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def init_GPIO():
     logging.info("Rotary Encoder Test Program")
     GPIO.setwarnings(True)
@@ -671,21 +707,29 @@ def init_GPIO():
     GPIO.setup(GPIO_BUTTON_RIGHT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(GPIO_BUTTON_RESET, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction pour dessiner les raquettes
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def draw_paddles(surface, color, left_paddle_y, right_paddle_y, paddle_with, paddle_height, line_width):
     pygame.draw.rect(surface, color, (int(line_width), int(left_paddle_y - paddle_height / 2) , paddle_with, paddle_height))
     pygame.draw.rect(surface, color, (int(surface.get_width() - paddle_with - line_width), int(right_paddle_y - paddle_height / 2), paddle_with, paddle_height))
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction pour dessiner la balle
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def draw_ball(surface, color, ball_x, ball_y, size):
     pygame.draw.rect(surface, color, (int(ball_x-size/2), int(ball_y-size/2), int(size), int(size)))
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction pour afficher le FPS
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def draw_fps(surface, color, font, text):
         text = font.render(text, True, color)
         surface.blit(text, (10, 10))
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction pour afficher le score
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def draw_score(surface, color, font, font_size, rotate_txt, left_score, right_score):
     left_text = font.render(str(left_score), True, color)
     right_text = font.render(str(right_score), True, color)
@@ -698,7 +742,9 @@ def draw_score(surface, color, font, font_size, rotate_txt, left_score, right_sc
         surface.blit(left_text, (int(surface.get_width() / 2 - (font_size/2 + 20)), 10))
         surface.blit(right_text, (int(surface.get_width() / 2 + 20), 10))
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction pour afficher le texte de fin de jeu
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def draw_endgame(surface, color, font, font_size, rotate_txt, left_score, right_score):
     # Victoire a gauche
     if left_score >= WIN_SCORE:
@@ -725,7 +771,9 @@ def draw_endgame(surface, color, font, font_size, rotate_txt, left_score, right_
             surface.blit(winner_text, (int(surface.get_width() * 0.75 - (len(WIN_TXT) * font_size / 4)), int(surface.get_height() / 2 - (font_size / 2)) ))
             surface.blit(looser_text, (int(surface.get_width() * 0.25 - (len(LOOSE_TXT) * font_size / 4)), int(surface.get_height() / 2 - (font_size / 2)) ))
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction pour afficher une ligne en pointilles
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def draw_dashed_line(surface, color, start_pos, end_pos, width=1, dash_length=10):
     x1, y1 = start_pos
     x2, y2 = end_pos
@@ -738,14 +786,18 @@ def draw_dashed_line(surface, color, start_pos, end_pos, width=1, dash_length=10
         end = round(x1 + (i + 1) * dx * dash_length), round(y1 + (i + 1) * dy * dash_length)
         pygame.draw.line(surface, color, start, end, width)
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction pour afficher la cadre de jeu
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def draw_frame(surface, color, width=1):
     pygame.draw.line(surface, color, (0,0), (surface.get_width(),0), width)
     pygame.draw.line(surface, color, (surface.get_width(),0), (surface.get_width(),surface.get_height()), width)
     pygame.draw.line(surface, color, (surface.get_width(),surface.get_height()), (0,surface.get_height()), width)
     pygame.draw.line(surface, color, (0,surface.get_height()), (0,0), width)
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction de boucle
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def pygame_event_loop(loop, event_queue):
 
     logging.info("init event loop")
@@ -754,9 +806,9 @@ def pygame_event_loop(loop, event_queue):
         event = pygame.event.wait()
         asyncio.run_coroutine_threadsafe(event_queue.put(event), loop=loop)
 
-# ####################################################
+# ############################################################################################################################################################
 # Fonction asynchrone de gestion des animations
-# ####################################################
+# ############################################################################################################################################################
 async def animation(surface, app_param, app_values, font, responsive, sfx):
 
     logging.info("init animation")
@@ -1025,9 +1077,9 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
 
         pygame.display.flip()
 
-# ####################################################
+# ############################################################################################################################################################
 # Fonction asynchrone de détection des evenements
-# ####################################################
+# ############################################################################################################################################################
 async def handle_events(event_queue, surface, app_param, app_values, responsive, sfx):
 
     logging.info("init handle events")
@@ -1171,9 +1223,9 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
             # --------------------------------------------------------------------------------------------------
             event_actions.remove(action) # Purge de l'action
 
-# ####################################################
+# ############################################################################################################################################################
 # Fonction asynchrone de détection des evenements GPIO
-# ####################################################
+# ############################################################################################################################################################
 async def handle_gpio(event_queue, surface, app_param, app_values, responsive, sfx):
 
     logging.info("init GPIO events")
@@ -1206,9 +1258,9 @@ async def handle_gpio(event_queue, surface, app_param, app_values, responsive, s
 
         await asyncio.sleep(0.1)
 
-# ####################################################
+# ############################################################################################################################################################
 # Fonction principale
-# ####################################################
+# ############################################################################################################################################################
 
 def main():
 
@@ -1276,9 +1328,9 @@ def main():
 
     pygame.quit()
 
-# ####################################################
+# ############################################################################################################################################################
 # Launch main
-# ####################################################
+# ############################################################################################################################################################
 
 if __name__ == "__main__":
     try:
