@@ -63,8 +63,10 @@ FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 1
 PADDLE_DECELERATE_MOUSE = 50 # Facteur de desceleration de la vitesse de déplacement des raquettes à la souris
 
 # GPIO_BOUNCE_TIME = 100
-# GPIO_ROTARY_LEFT_A = 17
-# GPIO_ROTARY_LEFT_B = 27
+GPIO_ROTARY_LEFT_A = 17
+GPIO_ROTARY_LEFT_B = 27
+GPIO_ROTARY_RIGHT_A = 5
+GPIO_ROTARY_RIGHT_B = 6
 GPIO_BUTTON_LEFT = 23 # Port GPIO du bouton du joueur de gauche
 GPIO_BUTTON_RIGHT = 25 # Port GPIO du bouton du joueur de droite
 GPIO_BUTTON_RESET = 12 # Port GPIO du bouton reset
@@ -622,34 +624,34 @@ def help():
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def help_gpio():
     print(f"""
-        **********************************************************************************
-        *                          {Fore.CYAN}RASPBERRY Pi GPIO Connector{Style.RESET_ALL}                           *
-        **********************************************************************************
-        *                                                                                *
-        *                                   Pin 1 Pin2                                   *
-        *                                {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                                *
-        *                      SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}                                *
-        *                      SCL1 / {Fore.GREEN}GPIO  3{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                                *
-        *                             {Fore.GREEN}GPIO  4{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 14{Style.RESET_ALL} / TXD0                     *
-        *                                 {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0                     *
-        *                             {Fore.GREEN}GPIO 17{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 18{Style.RESET_ALL}                            *
-        *                             {Fore.GREEN}GPIO 27{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} -----------------[SWITCH LEFT] *
-        *                             {Fore.GREEN}GPIO 22{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 23{Style.RESET_ALL} -------------[SWITCH LEFT] *
-        *                                {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 24{Style.RESET_ALL}                            *
-        *                      MOSI / {Fore.GREEN}GPIO 10{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ----------------[SWITCH RIGHT] *
-        *                      MISO / {Fore.GREEN}GPIO  9{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 25{Style.RESET_ALL} ------------[SWITCH RIGHT] *
-        *                      SCLK / {Fore.GREEN}GPIO 11{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  8{Style.RESET_ALL} / CE0#                     *
-        *                                 {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  7{Style.RESET_ALL} / CE1#                     *
-        *                     ID_SD / {Fore.GREEN}GPIO  0{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  1{Style.RESET_ALL} / ID_SC                    *
-        *                             {Fore.GREEN}GPIO  5{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ----------------[SWITCH RESET] *
-        *                             {Fore.GREEN}GPIO  6{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 12{Style.RESET_ALL} ------------[SWITCH RESET] *
-        *                             {Fore.GREEN}GPIO 13{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}                                *
-        *                      MISO / {Fore.GREEN}GPIO 19{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 16{Style.RESET_ALL} / CE2#                     *
-        *                             {Fore.GREEN}GPIO 26{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 20{Style.RESET_ALL} / MOSI                     *
-        *                                 {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 21{Style.RESET_ALL} / SCLK                     *
-        *                                  Pin 39 Pin 40                                 *
-        *                                                                                *
-        **********************************************************************************
+        *************************************************************************************
+        *                            {Fore.CYAN}RASPBERRY Pi GPIO Connector{Style.RESET_ALL}                            *
+        *************************************************************************************
+        *                     |                                         |                   *
+        *                     |               Pin 1 Pin2                |                   *
+        * [ROTARY LEFT VCC]---|----------- {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}             |                   *
+        *                     |  SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}             |                   *
+        *                     |  SCL1 / {Fore.GREEN}GPIO  3{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}             |                   *
+        *                     |         {Fore.GREEN}GPIO  4{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 14{Style.RESET_ALL} / TXD0  |                   *
+        * [ROTARY LEFT GND]---|------------ {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0  |                   *
+        * [ROTARY LEFT A]-----|-------- {Fore.GREEN}GPIO 17{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 18{Style.RESET_ALL}         |                   *
+        * [ROTARY LEFT B]-----|-------- {Fore.GREEN}GPIO 27{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|-----[SWITCH LEFT] *
+        *                     |         {Fore.GREEN}GPIO 22{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 23{Style.RESET_ALL} --------|-----[SWITCH LEFT] *
+        * [ROTARY RIGHT VCC]--|----------- {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 24{Style.RESET_ALL}         |                   *
+        *                     |  MOSI / {Fore.GREEN}GPIO 10{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|----[SWITCH RIGHT] *
+        *                     |  MISO / {Fore.GREEN}GPIO  9{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 25{Style.RESET_ALL} --------|----[SWITCH RIGHT] *
+        *                     |  SCLK / {Fore.GREEN}GPIO 11{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  8{Style.RESET_ALL} / CE0#  |                   *
+        * [ROTARY RIGHT GND]--|------------ {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  7{Style.RESET_ALL} / CE1#  |                   *
+        *                     | ID_SD / {Fore.GREEN}GPIO  0{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  1{Style.RESET_ALL} / ID_SC |                   *
+        * [ROTARY RIGHT A]----|-------- {Fore.GREEN}GPIO  5{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|----[SWITCH RESET] *
+        * [ROTARY RIGHT B]----|-------- {Fore.GREEN}GPIO  6{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 12{Style.RESET_ALL} --------|----[SWITCH RESET] *
+        *                     |         {Fore.GREEN}GPIO 13{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}             |                   *
+        *                     |  MISO / {Fore.GREEN}GPIO 19{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 16{Style.RESET_ALL} / CE2#  |                   *
+        *                     |         {Fore.GREEN}GPIO 26{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 20{Style.RESET_ALL} / MOSI  |                   *
+        *                     |             {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 21{Style.RESET_ALL} / SCLK  |                   *
+        *                     |              Pin 39 Pin 40              |                   *
+        *                     |                                         |                   *
+        *************************************************************************************
 
     """)
 
