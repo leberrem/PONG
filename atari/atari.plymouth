@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=Atari
-Description=This is a plymouth theme which simply displays atari image
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/atari
-ScriptFile=/usr/share/plymouth/themes/atari/atari.script

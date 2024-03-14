@@ -51,29 +51,18 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 sudo systemctl enable pong.service
 
-# Splash screen
-
-```
-scp -r mkl pi@192.168.1.58:~/.
-```
-```
-sudo apt-get -y install plymouth
-sudo mv mkl /usr/share/plymouth/themes
-sudo plymouth-set-default-theme mkl
-```
-
-# custom cmdline
+# custom cmdline for Splash screen
 
 add at the end of line
 
 ```
 sudo vi /boot/cmdline.txt
 # -----------------
-loglevel=3 logo.nologo quiet splash plymouth.ignore-serial-consoles vt.global_cursor_default=0
+logo.nologo vt.global_cursor_default=0 quiet loglevel=0 splash
 # -----------------
 ```
 
-# custom boot
+# custom boot for Splash screen
 
 ```
 sudo vi /boot/config.txt
@@ -81,6 +70,32 @@ sudo vi /boot/config.txt
 boot_delay=0
 disable_splash=1
 # -----------------
+```
+
+# Splash screen
+
+```
+sudo apt install fbi
+```
+```
+sudo vi /lib/systemd/system/splashscreen.service
+# -----------------
+[Unit]
+Description=Splash screen
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+ExecStart=/usr/bin/fbi -d /dev/fb0 --noverbose -a /home/pi/image/mkl.png
+StandardInput=tty
+StandardOutput=tty
+
+[Install]
+WantedBy=basic.target
+# -----------------
+```
+```
+sudo systemctl enable splashscreen
 ```
 
 ## change locale
