@@ -243,6 +243,8 @@ class application_parameters:
         self.no_sound = False
         self.fullscreen = False
         self.use_mouse = False
+        self.revert_x_axis = False
+        self.revert_y_axis = False
         self.use_gpio = False
         self.rotate_txt = False
         self.show_fps = False
@@ -257,6 +259,12 @@ class application_parameters:
                 elif "--use-mouse" in argv[i]:
                     logging.info("argument : use-mouse")
                     self.use_mouse = True
+                elif "--revert-x-axis" in argv[i]:
+                    logging.info("argument : revert-x-axis")
+                    self.revert_x_axis = True
+                elif "--revert-y-axis" in argv[i]:
+                    logging.info("argument : revert-y-axis")
+                    self.revert_y_axis = True
                 elif "--use-gpio" in argv[i]:
                     logging.info("argument : use-gpio")
                     self.use_gpio = True
@@ -613,6 +621,8 @@ def help():
     --no-sound :{Style.DIM} Disable sound effects{Style.RESET_ALL}
     --fullscreen :{Style.DIM} Display in fullscreen{Style.RESET_ALL}
     --use-mouse :{Style.DIM} Use mouse control (useful for spinner){Style.RESET_ALL}
+    --revert-x-axis :{Style.DIM} Use GPIO (useful for spinner){Style.RESET_ALL}
+    --revert-y-axis :{Style.DIM} Use GPIO (useful for spinner){Style.RESET_ALL}
     --rotate-txt :{Style.DIM} Rotate texte to play face-to-face{Style.RESET_ALL}
     --use-gpio :{Style.DIM} Use GPIO (useful for Raspberry){Style.RESET_ALL}
     --help-gpio :{Style.DIM} Help on GPIO (useful for Raspberry){Style.RESET_ALL}
@@ -1143,14 +1153,26 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
             rel_x, rel_y = event.rel
             # Barre gauche - mouvement horizontal
             if rel_x < 0:
-                app_values.left_paddle_move = "MOUSE_UP"
+                if app_param.revert_x_axis == False:
+                    app_values.left_paddle_move = "MOUSE_UP"
+                else:
+                    app_values.left_paddle_move = "MOUSE_DOWN"
             elif rel_x > 0:
-                app_values.left_paddle_move = "MOUSE_DOWN"
+                if app_param.revert_x_axis == False:
+                    app_values.left_paddle_move = "MOUSE_DOWN"
+                else:
+                    app_values.left_paddle_move = "MOUSE_UP"
             # Barre droite - mouvement vetical
             if rel_y < 0:
-                app_values.right_paddle_move = "MOUSE_UP"
+                if app_param.revert_y_axis == False:
+                    app_values.right_paddle_move = "MOUSE_UP"
+                else:
+                    app_values.right_paddle_move = "MOUSE_DOWN"
             elif rel_y > 0:
-                app_values.right_paddle_move = "MOUSE_DOWN"
+                if app_param.revert_y_axis == False:
+                    app_values.right_paddle_move = "MOUSE_DOWN"
+                else:
+                    app_values.right_paddle_move = "MOUSE_UP"
 
         if event.type == GPIO_BUTTON_LEFT_EVENT:
                 event_actions.append("LEFT_PADDLE_BUTTON")
