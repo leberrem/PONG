@@ -101,7 +101,7 @@ class responsive_values:
         self.PADDLE_WIDTH = int(height*self.ratio*0.2) # Taille des raquettes
         self.PADDLE_HEIGHT = int(height*self.ratio) # Taille des raquettes
         self.PADDLE_SPEED_KEYBOARD = int(height*self.ratio*10) # Vitesse de deplacement des raquettes avec le clavier
-        self.PADDLE_SPEED_MOUSE = int(height*self.ratio/3.5) # Vitesse de deplacement des raquettes avec la souris
+        self.PADDLE_SPEED_MOUSE = int(height*self.ratio/6) # Vitesse de deplacement des raquettes avec la souris
         self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
         self.BALL_INIT_SPEED = int(width*self.ratio*6)  # Vitesse initiale de deplacemant de la balle
         self.BALL_MAX_SPEED = int(width*self.ratio*10)  # Vitesse maximale de deplacemant de la balle
@@ -129,8 +129,8 @@ class application_values:
         self._registered_ball_x_position = 0
         self._registered_ball_y_position = 0
         self._ball_in_fire = False
-        self._left_paddle_move = "NONE"
-        self._right_paddle_move = "NONE"
+        self._left_paddle_move = 0
+        self._right_paddle_move = 0
 
         # Initialisation de la position des raquettes
         self._left_paddle_y = surface.get_height() / 2
@@ -643,18 +643,18 @@ def help_gpio():
         *                     |  SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL} ------------|-[ROTARY RIGHT VCC] *
         *                     |  SCL1 / {Fore.GREEN}GPIO  3{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}             |                    *
         *                     |         {Fore.GREEN}GPIO  4{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 14{Style.RESET_ALL} / TXD0  |                    *
-        * [ROTARY LEFT GND]---|------------ {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0  |                    *
-        * [ROTARY LEFT A]-----|-------- {Fore.GREEN}GPIO 17{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 18{Style.RESET_ALL}         |                    *
-        * [ROTARY LEFT B]-----|-------- {Fore.GREEN}GPIO 27{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|------[SWITCH LEFT] *
+        *                     |             {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0  |                    *
+        *                     |         {Fore.GREEN}GPIO 17{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 18{Style.RESET_ALL}         |                    *
+        *                     |         {Fore.GREEN}GPIO 27{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|------[SWITCH LEFT] *
         *                     |         {Fore.GREEN}GPIO 22{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 23{Style.RESET_ALL} --------|------[SWITCH LEFT] *
         *                     |            {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 24{Style.RESET_ALL}         |                    *
         *                     |  MOSI / {Fore.GREEN}GPIO 10{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|-----[SWITCH RIGHT] *
         *                     |  MISO / {Fore.GREEN}GPIO  9{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 25{Style.RESET_ALL} --------|-----[SWITCH RIGHT] *
         *                     |  SCLK / {Fore.GREEN}GPIO 11{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  8{Style.RESET_ALL} / CE0#  |                    *
-        * [ROTARY RIGHT GND]--|------------ {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  7{Style.RESET_ALL} / CE1#  |                    *
+        *                     |             {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  7{Style.RESET_ALL} / CE1#  |                    *
         *                     | ID_SD / {Fore.GREEN}GPIO  0{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO  1{Style.RESET_ALL} / ID_SC |                    *
-        * [ROTARY RIGHT A]----|-------- {Fore.GREEN}GPIO  5{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|-----[SWITCH RESET] *
-        * [ROTARY RIGHT B]----|-------- {Fore.GREEN}GPIO  6{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 12{Style.RESET_ALL} --------|-----[SWITCH RESET] *
+        *                     |         {Fore.GREEN}GPIO  5{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL} ------------|-----[SWITCH RESET] *
+        *                     |         {Fore.GREEN}GPIO  6{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 12{Style.RESET_ALL} --------|-----[SWITCH RESET] *
         *                     |         {Fore.GREEN}GPIO 13{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}             |                    *
         *                     |  MISO / {Fore.GREEN}GPIO 19{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 16{Style.RESET_ALL} / CE2#  |                    *
         *                     |         {Fore.GREEN}GPIO 26{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 20{Style.RESET_ALL} / MOSI  |                    *
@@ -664,40 +664,6 @@ def help_gpio():
         **************************************************************************************
 
     """)
-
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Fonction d'initialisation des interface GPIO
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-# def rotation_decode(channel):
-#     global rotation_counter_left
-#     global rotation_counter_right
-
-#     Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
-#     Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
-
-#     logging.info('--------------------------------')
-#     logging.info('Switch_Left_A %s' % Switch_Left_A)
-#     logging.info('Switch_Left_B %s' % Switch_Left_B)
-
-#     if (Switch_Left_A == 1) and (Switch_Left_B == 0):
-#         rotation_counter_left += 1
-#         event_actions.append("LEFT_PADDLE_UP")
-#         logging.info('direction -> %s' % rotation_counter_left)
-#         while Switch_Left_B == 0:
-#             Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
-#         while Switch_Left_B == 1:
-#             Switch_Left_B = GPIO.input(GPIO_ROTARY_LEFT_B)
-#         return
-
-#     elif (Switch_Left_A == 1) and (Switch_Left_B == 1):
-#         rotation_counter_left -= 1
-#         event_actions.append("LEFT_PADDLE_DOWN")
-#         logging.info('direction <- %s' % rotation_counter_left)
-#         while Switch_Left_A == 1:
-#             Switch_Left_A = GPIO.input(GPIO_ROTARY_LEFT_A)
-#         return
-#     else:
-#         return
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Fonction d'initialisation des interface GPIO
@@ -840,20 +806,15 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
         if app_values.game_paused == False:
 
             # déplacement de la raquette gauche
-            if app_values.left_paddle_move == "MOUSE_UP":
-                decelerate = ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
-                app_values.left_paddle_y -=  responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
-                app_values.left_paddle_move = "NONE"
-                last_move_left = current_time
-            elif app_values.left_paddle_move == "MOUSE_DOWN":
-                decelerate = ((current_time - last_move_left) * PADDLE_DECELERATE_MOUSE)
-                app_values.left_paddle_y +=  responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
-                app_values.left_paddle_move = "NONE"
-                last_move_left = current_time
-            elif app_values.left_paddle_move == "KEYBOARD_UP":
-                app_values.left_paddle_y -= (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
-            elif app_values.left_paddle_move == "KEYBOARD_DOWN":
-                app_values.left_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+            if app_param.use_mouse == True:
+                if app_values.left_paddle_move != 0:
+                    app_values.left_paddle_y += app_values.left_paddle_move * responsive.PADDLE_SPEED_MOUSE
+                    app_values.left_paddle_move = 0
+            else:
+                if app_values.left_paddle_move > 0:
+                    app_values.left_paddle_y -= (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+                elif app_values.left_paddle_move < 0:
+                    app_values.left_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
 
             # Limites de déplacement de la raquette gauche
             if app_values.left_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
@@ -862,20 +823,15 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 app_values.left_paddle_y = surface.get_height() - LINE_WIDTH - responsive.PADDLE_HEIGHT / 2
 
             # déplacement de la raquette droite
-            if app_values.right_paddle_move == "MOUSE_UP":
-                decelerate = ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
-                app_values.right_paddle_y -= responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
-                app_values.right_paddle_move = "NONE"
-                last_move_right = current_time
-            elif app_values.right_paddle_move == "MOUSE_DOWN":
-                decelerate = ((current_time - last_move_right) * PADDLE_DECELERATE_MOUSE)
-                app_values.right_paddle_y += responsive.PADDLE_SPEED_MOUSE / (decelerate if decelerate > 1 else 1)
-                app_values.right_paddle_move = "NONE"
-                last_move_right = current_time
-            elif app_values.right_paddle_move == "KEYBOARD_UP":
-                app_values.right_paddle_y -=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
-            elif app_values.right_paddle_move == "KEYBOARD_DOWN":
-                app_values.right_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+            if app_param.use_mouse == True:
+                if app_values.right_paddle_move != 0:
+                    app_values.right_paddle_y += app_values.right_paddle_move * responsive.PADDLE_SPEED_MOUSE
+                    app_values.right_paddle_move = 0
+            else:
+                if app_values.right_paddle_move > 0:
+                    app_values.right_paddle_y -=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
+                elif app_values.right_paddle_move < 0:
+                    app_values.right_paddle_y +=  (current_time - last_time) * responsive.PADDLE_SPEED_KEYBOARD
 
             # Limites de déplacement de la raquette droite
             if app_values.right_paddle_y < LINE_WIDTH + responsive.PADDLE_HEIGHT / 2:
@@ -1119,23 +1075,27 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
                 if app_values.game_paused == False:
                     event_actions.append("RIGHT_PADDLE_BUTTON")
             if event.key == pygame.K_w or event.key == pygame.K_z:
-                app_values.left_paddle_move = "KEYBOARD_UP"
+                if app_param.use_mouse == False: app_values.left_paddle_move = 1
             if event.key == pygame.K_s:
-                app_values.left_paddle_move = "KEYBOARD_DOWN"
+                if app_param.use_mouse == False: app_values.left_paddle_move = -1
             if event.key == pygame.K_UP:
-                app_values.right_paddle_move = "KEYBOARD_UP"
+                if app_param.use_mouse == False: app_values.right_paddle_move = 1
             if event.key == pygame.K_DOWN:
-                app_values.right_paddle_move = "KEYBOARD_DOWN"
+                if app_param.use_mouse == False: app_values.right_paddle_move = -1
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_w or event.key == pygame.K_z:
-                if app_values.left_paddle_move == "KEYBOARD_UP": app_values.left_paddle_move = "NONE"
+                if app_param.use_mouse == False:
+                    if app_values.left_paddle_move == 1: app_values.left_paddle_move = 0
             if event.key == pygame.K_s:
-                if app_values.left_paddle_move == "KEYBOARD_DOWN": app_values.left_paddle_move = "NONE"
+                if app_param.use_mouse == False:
+                    if app_values.left_paddle_move == -1: app_values.left_paddle_move = 0
             if event.key == pygame.K_UP:
-                if app_values.right_paddle_move == "KEYBOARD_UP": app_values.right_paddle_move = "NONE"
+                if app_param.use_mouse == False:
+                    if app_values.right_paddle_move == 1: app_values.right_paddle_move = 0
             if event.key == pygame.K_DOWN:
-                if app_values.right_paddle_move == "KEYBOARD_DOWN": app_values.right_paddle_move = "NONE"
+                if app_param.use_mouse == False:
+                    if app_values.right_paddle_move == -1: app_values.right_paddle_move = 0
 
         if event.type == pygame.MOUSEBUTTONDOWN and app_param.use_mouse == True:
             # Barre gauche - click gauche
@@ -1154,25 +1114,50 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
             # Barre gauche - mouvement horizontal
             if rel_x < 0:
                 if app_param.revert_x_axis == False:
-                    app_values.left_paddle_move = "MOUSE_UP"
+                    if app_values.left_paddle_move <= 0:
+                        app_values.left_paddle_move -= 1
+                    else:
+                        app_values.left_paddle_move = -1
                 else:
-                    app_values.left_paddle_move = "MOUSE_DOWN"
+                    if app_values.left_paddle_move >= 0:
+                        app_values.left_paddle_move += 1
+                    else:
+                        app_values.left_paddle_move = 1
             elif rel_x > 0:
                 if app_param.revert_x_axis == False:
-                    app_values.left_paddle_move = "MOUSE_DOWN"
+                    if app_values.left_paddle_move >= 0:
+                        app_values.left_paddle_move += 1
+                    else:
+                        app_values.left_paddle_move = 1
                 else:
-                    app_values.left_paddle_move = "MOUSE_UP"
+                    if app_values.left_paddle_move <= 0:
+                        app_values.left_paddle_move -= 1
+                    else:
+                        app_values.left_paddle_move = -1
+
             # Barre droite - mouvement vetical
             if rel_y < 0:
                 if app_param.revert_y_axis == False:
-                    app_values.right_paddle_move = "MOUSE_UP"
+                    if app_values.right_paddle_move <= 0:
+                        app_values.right_paddle_move -= 1
+                    else:
+                        app_values.right_paddle_move = -1
                 else:
-                    app_values.right_paddle_move = "MOUSE_DOWN"
+                    if app_values.right_paddle_move >= 0:
+                        app_values.right_paddle_move += 1
+                    else:
+                        app_values.right_paddle_move = 1
             elif rel_y > 0:
                 if app_param.revert_y_axis == False:
-                    app_values.right_paddle_move = "MOUSE_DOWN"
+                    if app_values.right_paddle_move >= 0:
+                        app_values.right_paddle_move += 1
+                    else:
+                        app_values.right_paddle_move = 1
                 else:
-                    app_values.right_paddle_move = "MOUSE_UP"
+                    if app_values.right_paddle_move <= 0:
+                        app_values.right_paddle_move -= 1
+                    else:
+                        app_values.right_paddle_move = -1
 
         if event.type == GPIO_BUTTON_LEFT_EVENT:
                 event_actions.append("LEFT_PADDLE_BUTTON")

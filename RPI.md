@@ -38,7 +38,7 @@ Description=Start Pong
 [Service]
 Environment=DISPLAY=:0
 WorkingDirectory=/home/pi
-ExecStart=/bin/bash -c '/usr/bin/python3 game.py --fullscreen --rotate-txt --use-gpio --use-mouse --revert-y-axis > game.out 2>&1'
+ExecStart=/bin/bash -c '/usr/bin/python3 game.py --fullscreen --rotate-txt --use-gpio --use-mouse > game.out 2>&1'
 Restart=always
 RestartSec=10s
 KillMode=process
