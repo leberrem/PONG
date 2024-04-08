@@ -550,20 +550,21 @@ class Shiny_particle:
 # Class Shiny
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Shiny:
-    def __init__(self, x, y):
+    def __init__(self, x, y, r=5):
         self.x = x
         self.y = y
+        self.r = r
         self.shiny_intensity = 2
         self.shiny_particles = []
         for i in range(self.shiny_intensity * 25):
-            self.shiny_particles.append(Shiny_particle(self.x, self.y, random.randint(1, 5)))
+            self.shiny_particles.append(Shiny_particle(self.x, self.y, random.randint(1, self.r)))
 
 
     def update_shiny(self):
         for i in self.shiny_particles:
             if i.original_r <= 0:
                 self.shiny_particles.remove(i)
-                self.shiny_particles.append(Shiny_particle(self.x, self.y, random.randint(1, 5)))
+                self.shiny_particles.append(Shiny_particle(self.x, self.y, random.randint(1, self.r)))
                 del i
                 continue
             i.update()
@@ -866,7 +867,7 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 app_values.ball_speed += BALL_ACCELERATION * (1 if app_values.ball_speed > 0 else -1)  # Augmentation de la vitesse
                 app_values.ball_speed = max(min(app_values.ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
                 if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_in_fire == False:
-                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y))
+                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y, app_values.BALL_SIZE))
                     app_values.ball_in_fire = True
                 app_values.ball_speed_x = -app_values.ball_speed_x
                 app_values.ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
