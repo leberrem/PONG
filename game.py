@@ -60,13 +60,8 @@ MAX_FPS = 100 # Vitesse de rafraichessement maximum
 EFFECT_FPS = 60 # Vitesse de l'animation
 WIDTH, HEIGHT = 800, 600 # Resolution d'affichage
 FIREWORK_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (255, 192, 203), (255, 0, 255)] # Jeu de couleur du feu d'artifice
-PADDLE_DECELERATE_MOUSE = 50 # Facteur de desceleration de la vitesse de déplacement des raquettes à la souris
 
 # GPIO_BOUNCE_TIME = 100
-GPIO_ROTARY_LEFT_A = 17 # Port GPIO de l'encodeur du joueur de gauche
-GPIO_ROTARY_LEFT_B = 27 # Port GPIO de l'encodeur du joueur de gauche
-GPIO_ROTARY_RIGHT_A = 5 # Port GPIO de l'encodeur du joueur de droite
-GPIO_ROTARY_RIGHT_B = 6 # Port GPIO de l'encodeur du joueur de droite
 GPIO_BUTTON_LEFT = 23 # Port GPIO du bouton du joueur de gauche
 GPIO_BUTTON_RIGHT = 25 # Port GPIO du bouton du joueur de droite
 GPIO_BUTTON_RESET = 12 # Port GPIO du bouton reset
@@ -82,9 +77,6 @@ shiny_effects = []
 
 # Pile des actions à traiter
 event_actions = []
-
-#rotation_counter_left = 50
-#rotation_counter_right = 50
 
 log_file = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".log"
 
@@ -106,7 +98,7 @@ class responsive_values:
         self.BALL_SIZE = int(self.ratio_height*0.2) # Taille de la balle
         self.BALL_INIT_SPEED = int(self.ratio_width*6)  # Vitesse initiale de deplacemant de la balle
         self.BALL_MAX_SPEED = int(self.ratio_width*10)  # Vitesse maximale de deplacemant de la balle
-        self.BALL_INERTIA = int(self.ratio_height*0.05) # Inertie de suivi de la balle sur la raquette
+        self.BALL_INERTIA = int(self.ratio_height*0.04) # Inertie de suivi de la balle sur la raquette
         self.FONT_LARGE_SIZE = int(self.ratio_height*0.8) # Taille de la police de caracteres large
         self.FONT_SMALL_SIZE = int(self.ratio_height*0.4) # Taille de la police de caracteres petite
         self.DASH_LENGTH = int(self.ratio_height*0.1) # Definition du motif de pointille
@@ -129,7 +121,7 @@ class application_values:
         self._ball_replace_timer = 0
         self._registered_ball_x_position = 0
         self._registered_ball_y_position = 0
-        self._ball_in_fire = False
+        self._ball_shiny = False
         self._left_paddle_move = 0
         self._right_paddle_move = 0
 
@@ -176,9 +168,9 @@ class application_values:
     def ball_replace_timer(self, value): self._ball_replace_timer = value
 
     @property
-    def ball_in_fire(self): return self._ball_in_fire
-    @ball_in_fire.setter
-    def ball_in_fire(self, value): self._ball_in_fire = value
+    def ball_shiny(self): return self._ball_shiny
+    @ball_shiny.setter
+    def ball_shiny(self, value): self._ball_shiny = value
 
     @property
     def ball_speed(self): return self._ball_speed
@@ -432,82 +424,6 @@ class Firework:
                 particle.draw(surface)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Class Flame_particle
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-class Flame_particle:
-    alpha_layer_qty = 2
-    alpha_glow_difference_constant = 2
-
-    def __init__(self, x, y, r=5):
-        self.x = x
-        self.y = y
-        self.r = r
-        self.original_r = r
-        self.alpha_layers = Flame_particle.alpha_layer_qty
-        self.alpha_glow = Flame_particle.alpha_glow_difference_constant
-        max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
-        self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
-        self.burn_rate = 0.1 * random.randint(1, 4)
-
-    def update(self):
-        self.y -= 7 - self.r
-        self.x += random.randint(-self.r, self.r)
-        self.original_r -= self.burn_rate
-        self.r = int(self.original_r)
-        if self.r <= 0:
-            self.r = 1
-
-    def draw(self, surface, color):
-        max_surf_size = 2 * self.r * self.alpha_layers * self.alpha_layers * self.alpha_glow
-        self.surf = pygame.Surface((max_surf_size, max_surf_size), pygame.SRCALPHA)
-        for i in range(self.alpha_layers, -1, -1):
-            alpha = 255 - i * (255 // self.alpha_layers - 5)
-            if alpha <= 0:
-                alpha = 0
-            radius = self.r * i * i * self.alpha_glow
-            # multi-color mode
-            # if self.r == 4 or self.r == 3:
-            #     r, g, b = (255, 0, 0)
-            # elif self.r == 2:
-            #     r, g, b = (255, 150, 0)
-            # else:
-            #     r, g, b = (50, 50, 50)
-            # Blue mode
-            #r, g, b = (0, 0, 255)
-            # White mode
-            #r, g, b = (255, 255, 255)
-            r, g, b = color
-            color_alpha = (r, g, b, alpha)
-            pygame.draw.circle(self.surf, color_alpha, (self.surf.get_width() // 2, self.surf.get_height() // 2), radius)
-        surface.blit(self.surf, self.surf.get_rect(center=(self.x, self.y)))
-
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Class Flame
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
-class Flame:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.flame_intensity = 2
-        self.flame_particles = []
-        for i in range(self.flame_intensity * 25):
-            self.flame_particles.append(Flame_particle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
-
-
-    def update_flame(self):
-        for i in self.flame_particles:
-            if i.original_r <= 0:
-                self.flame_particles.remove(i)
-                self.flame_particles.append(Flame_particle(self.x + random.randint(-5, 5), self.y, random.randint(1, 5)))
-                del i
-                continue
-            i.update()
-
-    def draw_flame(self, surface, color):
-        for i in self.flame_particles:
-            i.draw(surface, color)
-
-# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Class Shiny_particle
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class Shiny_particle:
@@ -553,7 +469,7 @@ class Shiny:
     def __init__(self, x, y, r=5):
         self.x = x
         self.y = y
-        self.r = r
+        self.r = r/4
         self.shiny_intensity = 2
         self.shiny_particles = []
         for i in range(self.shiny_intensity * 25):
@@ -641,8 +557,8 @@ def help_gpio():
         **************************************************************************************
         *                     |                                         |                    *
         *                     |                  1   2                  |                    *
-        *                     |            {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL} ------------|--[ROTARY LEFT VCC] *
-        *                     |  SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL} ------------|-[ROTARY RIGHT VCC] *
+        *                     |            {Fore.MAGENTA}+3V3{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}             |                    *
+        *                     |  SDA1 / {Fore.GREEN}GPIO  2{Style.RESET_ALL} [ ] [ ] {Fore.RED}+5V{Style.RESET_ALL}             |                    *
         *                     |  SCL1 / {Fore.GREEN}GPIO  3{Style.RESET_ALL} [ ] [ ] {Style.DIM}GND{Style.RESET_ALL}             |                    *
         *                     |         {Fore.GREEN}GPIO  4{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 14{Style.RESET_ALL} / TXD0  |                    *
         *                     |             {Style.DIM}GND{Style.RESET_ALL} [ ] [ ] {Fore.GREEN}GPIO 15{Style.RESET_ALL} / RXD0  |                    *
@@ -671,18 +587,8 @@ def help_gpio():
 # Fonction d'initialisation des interface GPIO
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
 def init_GPIO():
-    logging.info("Rotary Encoder Test Program")
     GPIO.setwarnings(True)
     GPIO.setmode(GPIO.BCM)
-    #GPIO.setup(GPIO_ROTARY_LEFT_A, GPIO.IN)
-    #GPIO.setup(GPIO_ROTARY_LEFT_B, GPIO.IN)
-    #GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH, rotation_decode, GPIO_BOUNCE_TIME)
-    #GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH, rotation_decode)
-    # GPIO.add_event_detect(GPIO_ROTARY_LEFT_A, GPIO.BOTH)
-    # GPIO.add_event_callback(GPIO_ROTARY_LEFT_A, rotation_decode)
-    #– BOTH, déclenche l’interrupt quand le pin change d’état ( de bas à haut , ou de haut à bas )
-    #– RISING, sur front montant, il se déclenche seulement quand on va passer d’un état bas à haut
-    #– FALLING, sur front descendant, il se déclenche seulement quand on va passer d’un état haut à bas
     GPIO.setup(GPIO_BUTTON_LEFT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(GPIO_BUTTON_RIGHT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(GPIO_BUTTON_RESET, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -795,8 +701,6 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
 
     current_time = 0
     last_time = 0
-    last_move_left = 0
-    last_move_right = 0
     last_time_effect = 0
     last_time_fps = 0
     last_fps = current_fps = 0
@@ -866,9 +770,9 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 if not app_param.no_sound: pygame.mixer.Channel(1).play(sfx.paddle_sound)
                 app_values.ball_speed += BALL_ACCELERATION * (1 if app_values.ball_speed > 0 else -1)  # Augmentation de la vitesse
                 app_values.ball_speed = max(min(app_values.ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
-                if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_in_fire == False:
-                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y, app_values.BALL_SIZE))
-                    app_values.ball_in_fire = True
+                if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_shiny == False:
+                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y, responsive.BALL_SIZE))
+                    app_values.ball_shiny = True
                 app_values.ball_speed_x = -app_values.ball_speed_x
                 app_values.ball_x = LINE_WIDTH + SPACE_WIDTH + responsive.PADDLE_WIDTH + responsive.BALL_SIZE / 2
                 if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x - responsive.BALL_SIZE / 2, app_values.ball_y, app_values.main_color, DIRECTION_RIGHT))
@@ -884,9 +788,9 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 if not app_param.no_sound: pygame.mixer.Channel(1).play(sfx.paddle_sound)
                 app_values.ball_speed += BALL_ACCELERATION * (1 if app_values.ball_speed > 0 else -1)  # Augmentation de la vitesse
                 app_values.ball_speed = max(min(app_values.ball_speed, responsive.BALL_MAX_SPEED), -responsive.BALL_MAX_SPEED) # Vitesse maximale
-                if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_in_fire == False:
-                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y))
-                    app_values.ball_in_fire = True
+                if abs(app_values.ball_speed) >= responsive.BALL_MAX_SPEED and app_values.ball_shiny == False:
+                    if not app_param.no_effect: shiny_effects.append(Shiny(app_values.ball_x, app_values.ball_y, responsive.BALL_SIZE))
+                    app_values.ball_shiny = True
                 app_values.ball_speed_x = -app_values.ball_speed_x
                 app_values.ball_x = surface.get_width() - LINE_WIDTH - SPACE_WIDTH - responsive.PADDLE_WIDTH - responsive.BALL_SIZE / 2
                 if not app_param.no_effect: dust_effects.append(Dust(app_values.ball_x + responsive.BALL_SIZE / 2, app_values.ball_y, app_values.main_color, DIRECTION_LEFT))
@@ -915,7 +819,7 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 if not app_param.no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
                 if app_values.right_score >= WIN_SCORE:
                     app_values.ball_speed = responsive.BALL_INIT_SPEED
-                    app_values.ball_in_fire = False
+                    app_values.ball_shiny = False
                     app_values.game_started = False
 
             # Sortie de la balle a droite
@@ -936,7 +840,7 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
                 if not app_param.no_effect: Halo_frame_effects.append(Halo_frame(HALO_FRAME_WIDTH, HALO_FRAME_COUNT, HALO_FRAME_SPEED))
                 if app_values.left_score >= WIN_SCORE:
                     app_values.ball_speed = responsive.BALL_INIT_SPEED
-                    app_values.ball_in_fire = False
+                    app_values.ball_shiny = False
                     app_values.game_started = False
 
         else:
@@ -974,6 +878,8 @@ async def animation(surface, app_param, app_values, font, responsive, sfx):
             else:
                 # Reprise du jeu
                 app_values.game_paused = False
+                app_values.left_paddle_move = 0
+                app_values.right_paddle_move = 0
 
         surface.fill(BLACK)
 
@@ -1226,7 +1132,7 @@ async def handle_events(event_queue, surface, app_param, app_values, responsive,
                 app_values.right_score = 0
                 app_values.left_score = 0
                 app_values.ball_speed = responsive.BALL_INIT_SPEED
-                app_values.ball_in_fire = False
+                app_values.ball_shiny = False
             # --------------------------------------------------------------------------------------------------
             elif action == "EXIT":
                 pygame.QUIT
@@ -1272,7 +1178,6 @@ async def handle_gpio(event_queue, surface, app_param, app_values, responsive, s
 # ############################################################################################################################################################
 # Fonction principale
 # ############################################################################################################################################################
-
 def main():
 
     loop = asyncio.get_event_loop()
@@ -1280,8 +1185,6 @@ def main():
 
     # Controle des parametres d'entree
     app_param = application_parameters(sys.argv)
-
-    # pygame.key.set_repeat(20)
 
     # Definition du mode d'affichage
     if app_param.fullscreen:
