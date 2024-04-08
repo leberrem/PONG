@@ -97,18 +97,19 @@ log_file = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".log"
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
 class responsive_values:
     def __init__(self, width, height):
-        self.ratio = 1/6
-        self.PADDLE_WIDTH = int(height*self.ratio*0.2) # Taille des raquettes
-        self.PADDLE_HEIGHT = int(height*self.ratio) # Taille des raquettes
-        self.PADDLE_SPEED_KEYBOARD = int(height*self.ratio*10) # Vitesse de deplacement des raquettes avec le clavier
-        self.PADDLE_SPEED_MOUSE = int(height*self.ratio/6) # Vitesse de deplacement des raquettes avec la souris
-        self.BALL_SIZE = int(height*self.ratio*0.2) # Taille de la balle
-        self.BALL_INIT_SPEED = int(width*self.ratio*6)  # Vitesse initiale de deplacemant de la balle
-        self.BALL_MAX_SPEED = int(width*self.ratio*10)  # Vitesse maximale de deplacemant de la balle
-        self.BALL_INERTIA = int(height*self.ratio*0.06) # Inertie de suivi de la balle sur la raquette
-        self.FONT_LARGE_SIZE = int(height*self.ratio*0.8) # Taille de la police de caracteres large
-        self.FONT_SMALL_SIZE = int(height*self.ratio*0.4) # Taille de la police de caracteres petite
-        self.DASH_LENGTH = int(height*self.ratio*0.1) # Definition du motif de pointille
+        self.ratio_height = height/6
+        self.ratio_width = width/6
+        self.PADDLE_WIDTH = int(self.ratio_height*0.2) # Taille des raquettes
+        self.PADDLE_HEIGHT = int(self.ratio_height) # Taille des raquettes
+        self.PADDLE_SPEED_KEYBOARD = int(self.ratio_height*10) # Vitesse de deplacement des raquettes avec le clavier
+        self.PADDLE_SPEED_MOUSE = int(self.ratio_height/6) # Vitesse de deplacement des raquettes avec la souris
+        self.BALL_SIZE = int(self.ratio_height*0.2) # Taille de la balle
+        self.BALL_INIT_SPEED = int(self.ratio_width*6)  # Vitesse initiale de deplacemant de la balle
+        self.BALL_MAX_SPEED = int(self.ratio_width*10)  # Vitesse maximale de deplacemant de la balle
+        self.BALL_INERTIA = int(self.ratio_height*0.05) # Inertie de suivi de la balle sur la raquette
+        self.FONT_LARGE_SIZE = int(self.ratio_height*0.8) # Taille de la police de caracteres large
+        self.FONT_SMALL_SIZE = int(self.ratio_height*0.4) # Taille de la police de caracteres petite
+        self.DASH_LENGTH = int(self.ratio_height*0.1) # Definition du motif de pointille
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Class application_values
@@ -1338,7 +1339,7 @@ def main():
     pygame.quit()
 
 # ############################################################################################################################################################
-# Launch main
+# Point d'entree
 # ############################################################################################################################################################
 
 if __name__ == "__main__":
