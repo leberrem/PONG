@@ -50,7 +50,7 @@ DIRECTION_UP, DIRECTION_DOWN, DIRECTION_RIGHT, DIRECTION_LEFT = 0, 1, 2, 3
 
 SPACE_WIDTH = 5 # Taille des espaces
 LINE_WIDTH = 5 # Epaisseurs des lignes
-BALL_ACCELERATION = 10 # Acceleration de la balle a chaque rebond
+BALL_ACCELERATION = 8 # Acceleration de la balle a chaque rebond
 BALL_REPLACE_DURATION = 300 # Temps de replacement de la balle sur la raquette
 HALO_FRAME_COUNT = 2 # Nombre de flash du halo
 HALO_FRAME_SPEED = 5 # Vitesse du halo
@@ -96,8 +96,8 @@ class responsive_values:
         self.PADDLE_SPEED_KEYBOARD = int(self.ratio_height*10) # Vitesse de deplacement des raquettes avec le clavier
         self.PADDLE_SPEED_MOUSE = int(self.ratio_height/6) # Vitesse de deplacement des raquettes avec la souris
         self.BALL_SIZE = int(self.ratio_height*0.2) # Taille de la balle
-        self.BALL_INIT_SPEED = int(self.ratio_width*6)  # Vitesse initiale de deplacemant de la balle
-        self.BALL_MAX_SPEED = int(self.ratio_width*10)  # Vitesse maximale de deplacemant de la balle
+        self.BALL_INIT_SPEED = int(self.ratio_width*5)  # Vitesse initiale de deplacemant de la balle
+        self.BALL_MAX_SPEED = int(self.ratio_width*9)  # Vitesse maximale de deplacemant de la balle
         self.BALL_INERTIA = int(self.ratio_height*0.04) # Inertie de suivi de la balle sur la raquette
         self.FONT_LARGE_SIZE = int(self.ratio_height*0.8) # Taille de la police de caracteres large
         self.FONT_SMALL_SIZE = int(self.ratio_height*0.4) # Taille de la police de caracteres petite
