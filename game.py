@@ -539,8 +539,8 @@ def help():
     --no-sound :{Style.DIM} Disable sound effects{Style.RESET_ALL}
     --fullscreen :{Style.DIM} Display in fullscreen{Style.RESET_ALL}
     --use-mouse :{Style.DIM} Use mouse control (useful for spinner){Style.RESET_ALL}
-    --revert-x-axis :{Style.DIM} Use GPIO (useful for spinner){Style.RESET_ALL}
-    --revert-y-axis :{Style.DIM} Use GPIO (useful for spinner){Style.RESET_ALL}
+    --revert-x-axis :{Style.DIM} Revert mouse mouve (useful for spinner){Style.RESET_ALL}
+    --revert-y-axis :{Style.DIM} Revert mouse mouve (useful for spinner){Style.RESET_ALL}
     --rotate-txt :{Style.DIM} Rotate texte to play face-to-face{Style.RESET_ALL}
     --use-gpio :{Style.DIM} Use GPIO (useful for Raspberry){Style.RESET_ALL}
     --help-gpio :{Style.DIM} Help on GPIO (useful for Raspberry){Style.RESET_ALL}

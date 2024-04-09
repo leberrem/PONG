@@ -42,8 +42,8 @@ Pong game in python with particules effects
     --no-sound : Disable sound effects
     --fullscreen : Display in fullscreen
     --use-mouse : Use mouse control (useful for spinner)
-    --revert-x-axis : Use GPIO (useful for spinner)
-    --revert-y-axis : Use GPIO (useful for spinner)
+    --revert-x-axis : Revert mouse mouve (useful for spinner)
+    --revert-y-axis : Revert mouse mouve (useful for spinner)
     --rotate-txt : Rotate texte to play face-to-face
     --use-gpio : Use GPIO (useful for Raspberry)
     --help-gpio : Help on GPIO (useful for Raspberry)
