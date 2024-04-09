@@ -17,3 +17,7 @@ Pong game in python with particules effects
 ## Instruction for Raspberry Pi
 
 [Raspberry Pi](RPI.md)
+
+## Instruction for Compile
+
+[Compilation](compile.md)
