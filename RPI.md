@@ -29,8 +29,8 @@ scp -r game.* font sound image pi@192.168.1.58:~/.
 
 ## auto-start
 
+```
 sudo vi /lib/systemd/system/pong.service
-
 # --------------
 [Unit]
 Description=Start Pong
@@ -47,10 +47,11 @@ TimeoutSec=infinity
 [Install]
 WantedBy=multi-user.target
 # --------------
-
+```
+```
 sudo systemctl daemon-reload
 sudo systemctl enable pong.service
-
+```
 # custom cmdline for Splash screen
 
 add at the end of line
