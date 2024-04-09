@@ -12,7 +12,7 @@ Pong game in python with particules effects
 - 2x EG STARTS Arcade Spinner for Arcade1UP
 - 1x Thunderstick Studios 12 in 1 Interface Board
 - 3x Concave black short arcade button - 28mm
-- 1x power switch
+- 1x Power switch
 
 ## Instruction for Raspberry Pi
 
